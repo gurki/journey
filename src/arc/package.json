@@ -1,0 +1,22 @@
+{
+  "name": "arc",
+  "module": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "vite": "^5.2.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "ascii-histogram": "^1.2.1",
+    "geolib": "^3.3.4",
+    "p5": "^1.9.4"
+  }
+}

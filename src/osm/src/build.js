@@ -185,6 +185,7 @@ function generateHighway( item ) {
 
     const isPath = ( item.geometry.type === "LineString" );
     const isFootway = [ "footway" ].includes( type );
+
     const width = props.width ? props.width : ( props.lanes ? props.lanes * 5 : 5 );
     const color = isPath ? ( isFootway ? "#aaaaaa" : "#888888" ) : "#696969";
     const height = isPath ? ( isFootway ? 4 : 3 ) : 2;

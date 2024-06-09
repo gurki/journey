@@ -23,10 +23,12 @@ function initialize() {
     $.scene = new THREE.Scene();
 
     $.camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 10000 );
-    $.camera.position.set( 300, 200, 1000 );
+    $.camera.position.set( 0, 1000, 1000 );
 
     $.controls = new MapControls( $.camera, $.renderer.domElement );
     $.controls.enableDamping = true;
+    $.controls.target.set( 0, 0, 100 );
+    $.controls.update();
 
     const size = 1000;
     const divisions = 10;

@@ -23,24 +23,21 @@ async function fetchData() {
 
 async function build() {
 
+    let count = 0;
     const geojson = await fetchData();
     
     for ( const item of geojson.features ) {
 
         const props = item.properties;
 
-        //  MultiPolygon := Array[ Polygon ]
-        //  Polygon := Array[ Coords ]
-        //  Coords := Array[ 2 ]
-
         if ( props.building ) {
 
         } else if ( props.highway ) {
-            
+            generateHighway( item );
         } else if ( props.railway ) {
 
         } else if ( props.natural ) {
-            generateNatural( item );
+            // generateNatural( item );
         } else if ( props.leisure ) {
             
         }
@@ -67,6 +64,41 @@ function shapeFromPolygon( polygon ) {
     });
 
 	return shape;
+    
+}
+
+
+function geometryFromLineString( polygon, width = 5, height = 2, steps = 100 ) {
+
+    const points = polygon.map( coord => {
+        const arr = util.gpsArrToEnu( $.center, coord );
+        return new THREE.Vector3( arr[0], arr[1], 0 );
+    });
+
+    const curve = new THREE.CurvePath();
+
+    for ( let i = 0; i < points.length - 1; i++ ) {
+        const line = new THREE.LineCurve3( points[ i ], points[ i + 1 ] );
+        curve.add( line );
+    }
+    
+    const shape = new THREE.Shape();
+    shape.moveTo( -height / 2, 0 );
+    shape.lineTo( height / 2, 0 );
+    shape.lineTo( height / 2, width );
+    shape.lineTo( -height / 2, width );
+    shape.lineTo( -height / 2, 0 );
+
+    let geom = new THREE.ExtrudeGeometry( shape, {     
+        steps,
+        bevelEnabled: false,
+        extrudePath: curve
+    });
+
+    geom.rotateX( -Math.PI / 2 );
+    geom.translate( 0, height / 2, 0 );
+    geom.computeVertexNormals();
+    return geom;
     
 }
 
@@ -106,7 +138,7 @@ function geometryFromPolygons( polygons, height ) {
     const shape = compositeFromPolygons( polygons );
     
     const options = {
-        steps: 2,
+        steps: 1,
         depth: height,
         bevelEnabled: false
     };
@@ -119,12 +151,12 @@ function geometryFromPolygons( polygons, height ) {
 }
 
 
-function generateExtrudedGeomtry( geometry, height ) {
+function generateExtrudedGeomtry( geometry, height, width, steps ) {
 
     switch ( geometry.type ) {
         case "Polygon": return geometryFromPolygons( geometry.coordinates, height );
         case "MultiPolygon": return geometryFromMultiPolygons( geometry.coordinates, height );
-        case "LineString": return geometryFromLineString( geometry.coordinates, height );
+        case "LineString": return geometryFromLineString( geometry.coordinates, width, height, steps );
     }
      
     console.error( `unknown geometry type ${geometry.type}` );
@@ -138,6 +170,23 @@ function generateNatural( item ) {
 
     const geom = generateExtrudedGeomtry( item.geometry, 2 );
     const mat = new THREE.MeshPhongMaterial( { color: "#00FFFF" } );
+    const mesh = new THREE.Mesh( geom, mat );
+    $.scene.add( mesh );
+
+}
+
+
+function generateHighway( item ) {
+    
+    if ( item.geometry.type === "Point" ) return;
+    
+    const isPath = ( item.geometry.type === "LineString" );
+    const color = isPath ? "#aaaaaa" : "#696969";
+    const width = 5;
+    const height = isPath ? 3 : 2;
+    
+    const geom = generateExtrudedGeomtry( item.geometry, height, width, 200 );
+    const mat = new THREE.MeshPhongMaterial( { color } );
     const mesh = new THREE.Mesh( geom, mat );
     $.scene.add( mesh );
 

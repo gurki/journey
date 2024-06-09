@@ -44,6 +44,37 @@ function initialize() {
 	$.scene.add( sun );
     
 
+    // const points = [
+    //     new THREE.Vector3( 0, 0, 0 ),
+    //     new THREE.Vector3( 10, 0, 0 ),
+    //     new THREE.Vector3( 20, 0, -20 ),
+    //     new THREE.Vector3( 40, 0, -10 ),
+    // ];
+    
+    // const curvePath = new THREE.CurvePath();
+
+    // for (let i = 0; i < points.length - 1; i++) {
+    //     const lineCurve = new THREE.LineCurve3(points[i], points[i + 1]);
+    //     curvePath.add(lineCurve);
+    // }
+    
+    // const roadWidth = 5;
+    // const roadHeight = 0.1;
+    // const shape = new THREE.Shape();
+    // shape.moveTo( -roadWidth / 2, 0 );
+    // shape.lineTo( roadWidth / 2, 0 );
+    // shape.lineTo( roadWidth / 2, roadHeight );
+    // shape.lineTo( -roadWidth / 2, roadHeight );
+    // shape.lineTo( -roadWidth / 2, 0 );
+
+    // const geom = new THREE.ExtrudeGeometry( shape, {     
+    //     steps: 200,
+    //     bevelEnabled: false,
+    //     extrudePath: curvePath
+    // });
+    // const mat = new THREE.MeshPhongMaterial( { color: "#00ff00" } );
+    // const mesh = new THREE.Mesh( geom, mat );
+    // $.scene.add( mesh );
 
 
     $.stats = new Stats();

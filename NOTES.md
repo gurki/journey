@@ -19,3 +19,6 @@
 ### arc
 - https://github.com/sobri909/LocoKit/blob/master/TimelineItemDescription.md
 - https://www.bigpaua.com/locokit/docs/Classes/LocomotionSample.html
+
+### threjs
+- https://sbcode.net/threejs/csg/#srcclientutilscsgmeshts

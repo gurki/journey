@@ -6,6 +6,13 @@
 - gain basic understanding of OQL
 - long way of figuring out relevant tags
 - learned that the overpass fetch result is json, and can further be processed to geojson with geometry
+- constructing the first geometries is super fun
+- start from shape, extrude, profit
+- implement for different geometry types (i.e. polygon multipolygon, linestring)
+- spent a long while to debug extrusion and understand how it works
+- turns out it assumes z-extrusion, so construct everything in xy, extrude in z, then rotate
+- realized that the final result needs to be clipped for size
+- found csg libraries out there
 
 
 ## 24w23-6

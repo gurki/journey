@@ -38,6 +38,8 @@ const sketch = ( p ) => {
         time.setTime( tmin.getTime() );
 
         const center = geolib.getCenterOfBounds( allLocs );
+        console.log( "bounds:", geolib.getBounds( allLocs ) );
+
         positions = allLocs.map( point => util.gpsToEnu( center, point ) );
         bounds = positions.reduce( 
             ( curr, pos ) => {

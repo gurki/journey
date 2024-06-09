@@ -1,0 +1,64 @@
+{
+  "railway": [
+    "light_rail",
+    "rail",
+    "tram",
+    "narrow_gauge",
+    "funicular",
+    "disused"
+  ],
+  "building": [],
+  "!highway": [
+    "bus_stop",
+    "crossing",
+    "elevator",
+    "give_way",
+    "milestone",
+    "proposed",
+    "speed_camera",
+    "speed_display",
+    "stop",
+    "street_lamp",
+    "traffic_mirror",
+    "traffic_signals"
+  ],
+  "leisure": [
+    "dog_park",
+    "garden",
+    "nature_reserve",
+    "park",
+    "swimming_pool"
+  ],
+  "waterway": [
+    "canal",
+    "ditch",
+    "drain",
+    "fuel",
+    "river",
+    "stream",
+    "waterfall",
+    "weir"
+  ],
+  "water": [
+    "basin",
+    "lake",
+    "pond",
+    "reflecting_pool",
+    "reflection_pool",
+    "river"
+  ],
+  "natural": [  
+    "sand",
+    "bare_rock",
+    "beach",
+    "grassland",
+    "scrub",
+    "shrub",
+    "shrubbery",
+    "tree",
+    "tree_group",
+    "tree_row",
+    "water",
+    "wood"
+  ]
+}

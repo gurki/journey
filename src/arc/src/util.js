@@ -30,6 +30,34 @@ export function gpsToEnu( refPoint, targetPoint ) {
 }
 
 
+export function gpsArrToEnu( refPoint, targetPoint ) {
+
+    const lon = targetPoint[0];
+    const lat = targetPoint[1];
+
+    let east = geolib.getDistance(
+        { latitude: refPoint.latitude, longitude: refPoint.longitude },
+        { latitude: refPoint.latitude, longitude: lon }
+    );
+    
+    if ( lon < refPoint.longitude ) {
+        east = -east;
+    } 
+
+    let north = geolib.getDistance(
+        { latitude: refPoint.latitude, longitude: refPoint.longitude },
+        { latitude: lat, longitude: refPoint.longitude }
+    );
+
+    if ( lat < refPoint.latitude ) {
+        north = -north;
+    }
+
+    return [ east, north ];
+    
+}
+
+
 export function enuToGps( refPoint, enu ) {
 
     const northPoint = geolib.computeDestinationPoint(

@@ -5,6 +5,8 @@ export const STATE = {
 
     container: null,
     containerSize: new THREE.Vector2(),
+    pane: null,
+    fpsGraph: null,
 
     scene: null,
     camera: null,

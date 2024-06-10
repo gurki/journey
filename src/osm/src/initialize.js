@@ -1,10 +1,7 @@
 import { STATE as $ } from "./state.js";
-
 import * as util from "../../arc/src/util.js";
-
 import * as THREE from "three"
 import { MapControls } from "three/examples/jsm/controls/MapControls";
-import Stats from "three/examples/jsm/libs/stats.module";
 
 
 function initialize() {
@@ -70,9 +67,6 @@ function initialize() {
     $.scene.add( $.city );
 
 
-    $.stats = new Stats();
-    $.container.appendChild( $.stats.dom );
-
     window.addEventListener( "resize", resize, false );
 
 }
@@ -93,11 +87,13 @@ function resize() {
 
 function animate() {
 
-	requestAnimationFrame( animate );
-	$.renderer.render( $.scene, $.camera );
+    $.fpsGraph.begin();
 
-    $.stats.update();
+	$.renderer.render( $.scene, $.camera );
 	$.controls.update();
+    
+    $.fpsGraph.end();
+	requestAnimationFrame( animate );
 
 }
 

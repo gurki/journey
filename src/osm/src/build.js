@@ -1,7 +1,7 @@
 import { STATE as $ } from "./state.js";
 import * as util from "../../arc/src/util.js";
 import { fetchGeojson } from "./fetch.js";
-import { CSG } from "./CSGMesh.ts";
+import { INTERSECTION, Brush, Evaluator } from 'three-bvh-csg';
 
 import * as THREE from "three"
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils";
@@ -55,17 +55,17 @@ async function build() {
 
     //  clip
 
-    const cubeGeom = new THREE.BoxGeometry( $.dimensions.width, 1000, $.dimensions.height, 1, 1, 1 );
-    // cubeGeom.translate( $.dimensions.width, 0, 0 );
-
-    let cube = CSG.fromGeometry( cubeGeom );
-    cube = cube.inverse();
     
+    console.log( "✂ clipping ..." );
+
+    const cubeGeom = new THREE.BoxGeometry( $.dimensions.width, 1000, $.dimensions.height, 1, 1, 1 );
+    const cubeBrush = new Brush( cubeGeom );
+    const evaluator = new Evaluator();
+
     for ( const child of $.city.children ) {
-        const csg = CSG.fromGeometry( child.geometry );
-        const res = csg.clipTo( cube );
-        const newGeom = CSG.toGeometry( res );
-        child.geometry = newGeom;
+        const childBrush = new Brush( child.geometry );
+        const result = evaluator.evaluate( childBrush, cubeBrush, INTERSECTION );    
+        child.geometry = result.geometry;
     }
 
     console.timeEnd( "⏱ build" );

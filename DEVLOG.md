@@ -2,14 +2,17 @@
 
 
 ## 24w24-1
-- looking into 3d print settings
-- inspiration from touch mapper
-- 3 (1-3) layers base
-- 4 (1-7) layers streets & rails
-- 3 (1-10) layers walkways
-- 7 (1-17) layers buildings
-- still water with wavey things
-- flowing water flat
+_print settings and clipping_
+
+<img src="docs/tweakpane-large.png" height=320>
+
+- some more brainstorming on settings
+- attempting clipping using custom csg
+- lots of artifacts and non-manifold edges
+- found three-bvh-csg, it's fabulous
+- clipping works great
+- refatoring a bit
+- live on github
 
 
 ## 24w23-7
@@ -37,6 +40,16 @@ _overpass, threejs and first stl_
 - found csg libraries out there
 - implement ALL the things!
 - successfully do first STL export
+
+### print settings
+- looking into 3d print settings
+- inspiration from touch mapper
+- 3 (1-3) layers base
+- 4 (1-7) layers streets & rails
+- 3 (1-10) layers walkways
+- 7 (1-17) layers buildings
+- still water with wavey things
+- flowing water flat
 
 
 ## 24w23-6
@@ -79,7 +92,7 @@ _blender, touch mapper and overpass_
 
 
 ## Precursor
-- hongkong 2023-10
-- 3d print from makerverse
-- fog of world
-- print visited areas on top of 3d map as little memoire
+- hongkong trip 2023-10
+- [3d print from makerverse](https://makerworld.com/en/models/102151)
+- [fog of world](https://fogofworld.app/en/)
+- idea: print visited areas on top of 3d map as little memoire

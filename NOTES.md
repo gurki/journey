@@ -2,7 +2,7 @@
 
 ### 3d models
 - https://touch-mapper.org/
-- blosm blender
+- https://github.com/vvoovv/blosm
 
 ###  osm & overpass
 - https://wiki.openstreetmap.org/wiki/Overpass_API

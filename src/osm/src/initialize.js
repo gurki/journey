@@ -1,11 +1,34 @@
 import { STATE as $ } from "./state.js";
 
+import * as util from "../../arc/src/util.js";
+
 import * as THREE from "three"
 import { MapControls } from "three/examples/jsm/controls/MapControls";
 import Stats from "three/examples/jsm/libs/stats.module";
 
 
 function initialize() {
+
+    $.center = { 
+        latitude: ( $.config.bounds.ymax + $.config.bounds.ymin ) / 2, 
+        longitude: ( $.config.bounds.xmax + $.config.bounds.xmin ) / 2 
+    };
+
+    const bottomLeft = { longitude: $.config.bounds.xmin, latitude: $.config.bounds.ymin };
+    const topRight = { longitude: $.config.bounds.xmax, latitude: $.config.bounds.ymax };
+
+    const blXY = util.gpsToEnu( $.center, bottomLeft );
+    const trXY = util.gpsToEnu( $.center, topRight );
+
+    $.localBounds = {
+        xmin: blXY.x, xmax: trXY.x,
+        ymin: blXY.y, ymax: trXY.y
+    };
+
+    $.dimensions = {
+        width: $.localBounds.xmax - $.localBounds.xmin, 
+        height: $.localBounds.ymax - $.localBounds.ymin, 
+    };
 
     $.container = document.getElementById( $.config.container );
     $.containerSize.x = container.clientWidth;
@@ -38,12 +61,13 @@ function initialize() {
     const axesHelper = new THREE.AxesHelper( 100 );
     $.scene.add( axesHelper );
 
-
 	let ambient = new THREE.AmbientLight( 0xffffff, 0.2 );
     let sun = new THREE.DirectionalLight( 0xffffff, Math.PI );
     sun.position.set( 300, 500, 100 );
 	$.scene.add( ambient );
 	$.scene.add( sun );
+
+    $.scene.add( $.city );
 
 
     $.stats = new Stats();

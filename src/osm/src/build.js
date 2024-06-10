@@ -1,47 +1,74 @@
 import { STATE as $ } from "./state.js";
 import * as util from "../../arc/src/util.js";
+import { fetchGeojson } from "./fetch.js";
+import { CSG } from "./CSGMesh.ts";
 
 import * as THREE from "three"
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils";
 
 
 async function fetchData() {
-    
-    // const total = { ymin: 47.47749, xmin: 19.0287947, ymax: 47.52146, xmax: 19.0854007 };
-    const hom = { ymin: 47.5089, xmin: 19.0722, ymax: 47.5190, xmax: 19.0867 };
-    $.bounds = hom;
-    $.center = { 
-        latitude: ( $.bounds.ymax + $.bounds.ymin ) / 2, 
-        longitude: ( $.bounds.xmax + $.bounds.xmin ) / 2 
-    };
-    // import { fetchGeojson } from "./src/util";
-    // const geojson = await fetchGeojson( bounds );
+    // return await fetchGeojson( $.config.bounds );
     return ( await ( await fetch( "./results/hom.geojson" ) ).json() );
 
 }
 
-
 async function build() {
 
-    const geojson = await fetchData();
+    console.time( "⏱ build" );
     
-    for ( const item of geojson.features ) {
+    const groundHeight = 10;
+    const groundGeom = new THREE.BoxGeometry( $.dimensions.width, groundHeight, $.dimensions.height );
+    const groundMat = new THREE.MeshToonMaterial( { color: "#161616" } );
+    const ground = new THREE.Mesh( groundGeom, groundMat );
+    ground.translateY( - groundHeight / 2 );
+    $.city.add( ground );
 
-        const props = item.properties;
+    const geojson = await fetchData();
+    const features = geojson.features;
 
-        if ( props.building ) {
+    console.log( "👷‍♀️ building city ..." );
+    
+    features.forEach( ( feature, index ) => {
 
-        } else if ( props.highway ) {
-            generateHighway( item );
-        } else if ( props.railway ) {
-            generateRailway( item );
-        } else if ( props.natural ) {
-            generateNatural( item );
-        } else if ( props.leisure ) {
-            
+        if ( index % 100 === 0 ) {
+            console.log( "   ", ( 100 * index / ( features.length - 1 ) ).toFixed( 1 ), "%" );
         }
 
+        if ( feature.geometry.type === "Point" ) return;
+        const props = feature.properties;       
+
+        if ( props.building ) {
+            generateBuilding( feature );
+        } else if ( props.highway ) {
+            generateHighway( feature );
+        } else if ( props.railway ) {
+            generateRailway( feature );
+        } else if ( props.natural ) {
+            generateNatural( feature );
+        } else if ( props.leisure ) {
+            generateLeisure( feature );
+        }
+
+    });
+
+
+    //  clip
+
+    const cubeGeom = new THREE.BoxGeometry( $.dimensions.width, 1000, $.dimensions.height, 1, 1, 1 );
+    // cubeGeom.translate( $.dimensions.width, 0, 0 );
+
+    let cube = CSG.fromGeometry( cubeGeom );
+    cube = cube.inverse();
+    
+    for ( const child of $.city.children ) {
+        const csg = CSG.fromGeometry( child.geometry );
+        const res = csg.clipTo( cube );
+        const newGeom = CSG.toGeometry( res );
+        child.geometry = newGeom;
     }
+
+    console.timeEnd( "⏱ build" );
 
 }
 
@@ -67,7 +94,7 @@ function shapeFromPolygon( polygon ) {
 }
 
 
-function geometryFromLineString( polygon, width = 5, height = 2, steps = 100 ) {
+function geometryFromLineString( polygon, width = 5, height = 2, steps = 20 ) {
 
     const points = polygon.map( coord => {
         const arr = util.gpsArrToEnu( $.center, coord );
@@ -75,13 +102,6 @@ function geometryFromLineString( polygon, width = 5, height = 2, steps = 100 ) {
     });
 
     const curve = new THREE.CatmullRomCurve3( points );
-
-    // const curve = new THREE.CurvePath();
-    // for ( let i = 0; i < points.length - 1; i++ ) {
-    //     const line = new THREE.LineCurve3( points[ i ], points[ i + 1 ] );
-    //     curve.add( line );
-    // }
-    
     const shape = new THREE.Shape();
     shape.moveTo( 0, - width / 2 );
     shape.lineTo( height, - width / 2 );
@@ -166,50 +186,70 @@ function generateExtrudedGeomtry( geometry, height, width, steps ) {
 
 function generateNatural( item ) {
 
-    if ( item.properties.natural !== "water" ) return;    
+    const isWater = ( item.properties.natural === "water" );
+    const isStone = ( item.properties.natural === "bare_rock" );
+    const color = isWater ? "#0ff" : ( isStone ? "#cc7" : "#294" );
 
     const geom = generateExtrudedGeomtry( item.geometry, 2 );
-    const mat = new THREE.MeshPhongMaterial( { color: "#00FFFF" } );
+    const mat = new THREE.MeshPhongMaterial( { color } );
     const mesh = new THREE.Mesh( geom, mat );
-    $.scene.add( mesh );
+    $.city.add( mesh );
+
+}
+
+
+function generateLeisure( item ) {
+
+    const geom = generateExtrudedGeomtry( item.geometry, 1 );
+    const mat = new THREE.MeshPhongMaterial( { color: "#2c4" } );
+    const mesh = new THREE.Mesh( geom, mat );
+    $.city.add( mesh );
+
+}
+
+
+function generateBuilding( item ) {
+
+    const levels = item.properties[ "building:levels" ] | 4;
+    const height = levels * 5;
+    const geom = generateExtrudedGeomtry( item.geometry, height );
+    const mat = new THREE.MeshPhongMaterial( { color: "#ccc" } );
+    const mesh = new THREE.Mesh( geom, mat );
+    $.city.add( mesh );
 
 }
 
 
 function generateHighway( item ) {
     
-    if ( item.geometry.type === "Point" ) return;
-    
     const props = item.properties;
     const type = props.highway;
 
-    const isPath = ( item.geometry.type === "LineString" );
-    const isFootway = [ "footway" ].includes( type );
+    const isCurve = ( item.geometry.type === "LineString" );
+    const isWalkable = [ "path", "steps", "track", "footway", "cycleway" ].includes( type );
 
     const width = props.width ? props.width : ( props.lanes ? props.lanes * 5 : 5 );
-    const color = isPath ? ( isFootway ? "#aaaaaa" : "#888888" ) : "#696969";
-    const height = isPath ? ( isFootway ? 4 : 3 ) : 2;
+    const color = isCurve ? ( isWalkable ? "#aaa" : "#777" ) : "#555";
+    const height = isCurve ? ( isWalkable ? 4 : 3 ) : 2;
     
-    const geom = generateExtrudedGeomtry( item.geometry, height, width, 100 );
+    const geom = generateExtrudedGeomtry( item.geometry, height, width );
     const mat = new THREE.MeshPhongMaterial( { color } );
     const mesh = new THREE.Mesh( geom, mat );
-    $.scene.add( mesh );
+    $.city.add( mesh );
 
 }
 
 
 function generateRailway( item ) {
-    
-    if ( item.geometry.type === "Point" ) return;
-    
+        
     const width = 3;
     const color = "#666";
     const height = 2;
     
-    const geom = generateExtrudedGeomtry( item.geometry, height, width, 100 );
+    const geom = generateExtrudedGeomtry( item.geometry, height, width );
     const mat = new THREE.MeshPhongMaterial( { color } );
     const mesh = new THREE.Mesh( geom, mat );
-    $.scene.add( mesh );
+    $.city.add( mesh );
 
 }
 

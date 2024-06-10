@@ -3,6 +3,8 @@ import osmtogeojson from "osmtogeojson";
 
 export async function fetchJson( bounds ) {
 
+    console.time( "⏱ fetchJson" );
+
     const overpassQuery = `
         [bbox:${bounds.ymin},${bounds.xmin},${bounds.ymax},${bounds.xmax}]
         [out:json];
@@ -19,7 +21,7 @@ export async function fetchJson( bounds ) {
         out skel qt;
     `;
 
-    return await fetch(
+    const json = await fetch(
         "https://overpass-api.de/api/interpreter",
         {
             method: "POST",
@@ -32,12 +34,29 @@ export async function fetchJson( bounds ) {
         return data.json();
     });
 
+    console.timeEnd( "⏱ fetchJson" );
+    return json;
+
 }
 
 
 export async function fetchGeojson( bounds ) {
-    return osmtogeojson( await fetchJson( bounds ) );
+
+    console.log( "🌍 fetching from overpass ..." );
+    const json = await fetchJson( bounds );
+    
+    console.time( "⏱ convertJson" );
+    console.log( "⏳ converting to geojson ..." );
+    const geojson = osmtogeojson( json );
+    console.timeEnd( "⏱ convertJson" );
+
+    return geojson;
+
 }
+
+
+// const bounds = { ymin: 47.5089, xmin: 19.0722, ymax: 47.5190, xmax: 19.0867 };
+// console.log( JSON.stringify( await fetchGeojson( bounds ), null, 2 ) );
 
 
 export function inspectTags( result ) {

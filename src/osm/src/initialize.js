@@ -1,11 +1,13 @@
 import { STATE as $ } from "./state.js";
+import { initTweakpane } from "./pane.js";
 import * as util from "../../arc/src/util.js";
-import * as THREE from "three"
+
 import { MapControls } from "three/examples/jsm/controls/MapControls";
+import * as THREE from "three"
 
 
-function initialize() {
-
+function computeDerived() {
+    
     $.center = { 
         latitude: ( $.config.bounds.ymax + $.config.bounds.ymin ) / 2, 
         longitude: ( $.config.bounds.xmax + $.config.bounds.xmin ) / 2 
@@ -27,6 +29,16 @@ function initialize() {
         height: $.localBounds.ymax - $.localBounds.ymin, 
     };
 
+    for ( const type in $.config.colors ) {
+        const color = $.config.colors[ type ];
+        $.materials[ type ] = new THREE.MeshPhongMaterial( { color } );
+    }
+
+}
+
+
+function initRenderer() {
+
     $.container = document.getElementById( $.config.container );
     $.containerSize.x = container.clientWidth;
     $.containerSize.y = container.clientHeight;
@@ -39,9 +51,6 @@ function initialize() {
     $.renderer.setClearColor( "#111" );
     $.container.appendChild( $.renderer.domElement );
 
-
-    $.scene = new THREE.Scene();
-
     $.camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 10000 );
     $.camera.position.set( 0, 1000, 1000 );
 
@@ -49,6 +58,15 @@ function initialize() {
     $.controls.enableDamping = true;
     $.controls.target.set( 0, 0, 100 );
     $.controls.update();
+
+    window.addEventListener( "resize", resize, false );
+
+}
+
+
+function initScene() {
+    
+    $.scene = new THREE.Scene();
 
     const size = 1000;
     const divisions = 10;
@@ -65,9 +83,6 @@ function initialize() {
 	$.scene.add( sun );
 
     $.scene.add( $.city );
-
-
-    window.addEventListener( "resize", resize, false );
 
 }
 
@@ -98,4 +113,15 @@ function animate() {
 }
 
 
-export { initialize, animate };
+function initialize() {
+    
+    computeDerived();
+    initTweakpane();
+    initRenderer();
+    initScene();
+    animate();
+
+}
+
+
+export { initialize };

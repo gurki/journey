@@ -1,6 +1,12 @@
 # Devlog
 
 
+## 24w24-2
+- playing around with filtering tiny shapes that are not printable
+- https://editor.p5js.org/gurki/sketches/Y7mPPOHFH
+- conclude that it's best and easiest to just leave that to the slicer for now
+
+
 ## 24w24-1
 _print settings and clipping_
 
@@ -55,7 +61,9 @@ _overpass, threejs and first stl_
 ## 24w23-6
 _first print, new idea, arc and brainstorming_
 
+
 <img src="docs/touch-mapper-print.png" height=320>
+<img src="docs/arc.jpeg" height=320>
 
 - printed touchmapper sample, it's awesome
 - idea: put it in front of a led matrix and draw route on there!

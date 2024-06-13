@@ -21,8 +21,8 @@ export const STATE = {
     config: {
         // bounds:  { ymin: 47.47749, xmin: 19.0287947, ymax: 47.52146, xmax: 19.0854007 }, //  total
         bounds: { ymin: 47.5089, xmin: 19.0722, ymax: 47.5190, xmax: 19.0867 }, //  hom
-        scale: 10000,
-        tileSize: 0.2,
+        scale: 7500,
+        tileSize: { width: 0.15, height: 0.15 },
         layerHeightMm: 0.2,   
         colors: {
             parks: "#2c4",      //  parks, gardens

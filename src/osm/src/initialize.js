@@ -31,18 +31,21 @@ function computeDerived() {
 
     for ( const type in $.config.colors ) {
         const color = $.config.colors[ type ];
-        $.materials[ type ] = new THREE.MeshPhongMaterial( { color } );
+        $.materials[ type ] = new THREE.MeshStandardMaterial( { color } );
     }
 
-    $.worldTileSize = $.config.scale * $.config.tileSize;
-    const tx = Math.ceil( w / $.worldTileSize );
-    const ty = Math.ceil( h / $.worldTileSize );
+    $.worldTileSize = {
+        width: $.config.scale * $.config.tileSize.width,
+        height: $.config.scale * $.config.tileSize.height
+    };
+    const tx = Math.ceil( w / $.worldTileSize.width );
+    const ty = Math.ceil( h / $.worldTileSize.height );
     $.tileCount = { x: tx, y: ty };
 
-    const ow = $.worldTileSize;
-    const oh = $.worldTileSize;
-    // const ow = tx * $.worldTileSize;
-    // const oh = ty * $.worldTileSize;
+    const ow = $.worldTileSize.width;
+    const oh = $.worldTileSize.height;
+    // const ow = tx * $.worldTileSize.width;
+    // const oh = ty * $.worldTileSize.height;
     $.outerDimensions = { width: ow, height: oh };
     
     const obl = { x:-ow / 2, y:-oh / 2 };

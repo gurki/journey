@@ -1,5 +1,5 @@
 import { STATE as $ } from "./state.js";
-import { exportSTL } from "./export.js";
+import { exportSTL, exportGLTF } from "./export.js";
 
 import { Pane } from "tweakpane";
 import * as EssentialsPlugin from '@tweakpane/plugin-essentials';
@@ -18,5 +18,6 @@ export function initTweakpane() {
     });
         
     $.pane.addButton({ title: 'Export STL' }).on( 'click', exportSTL );
+    $.pane.addButton({ title: 'Export GLTF' }).on( 'click', exportGLTF );
 
 }

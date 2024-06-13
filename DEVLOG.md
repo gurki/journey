@@ -1,7 +1,7 @@
 # Devlog
 
 ## 24w24-3 
-_scaling and manifolds_
+_scaling, manifolds and gltf_
 
 <img src="docs/scale/2500.png" height=160>
 <img src="docs/scale/5000.png" height=160>
@@ -21,6 +21,11 @@ _scaling and manifolds_
 - actually pretty confusing how the lib's supposed to be used
 - managed to merge everything, but materials get lost along the way
 - decide to merge for STL no-color export
+
+### gltf
+- add simple gltf export
+- json only for now, not sure how to do glb
+- works great though with colors and everything <3
 
 
 ## 24w24-2

@@ -8,9 +8,9 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils";
 
 
 async function fetchData() {
-    const data = await fetchGeojson( $.worldOuterBounds );
-    // const response = await fetch( "./results/hom.geojson" )
-    // const data = await ( response ).json();
+    // const data = await fetchGeojson( $.worldOuterBounds );
+    const response = await fetch( "./results/hom.geojson" )
+    const data = await ( response ).json();
     $.data = data;
 }
 
@@ -20,10 +20,10 @@ async function build() {
     console.time( "⏱ build" );
     
     const groundHeight = $.config.heights.ground;
-    const groundGeom = new THREE.BoxGeometry( 1000, groundHeight, 1000 );
+    const groundGeom = new THREE.BoxGeometry( $.worldTileSize.width, groundHeight, $.worldTileSize.height );
     const ground = new THREE.Mesh( groundGeom, $.materials.ground );
     ground.translateY( - groundHeight / 2 );
-    $.scene.add( ground );
+    $.city.add( ground );
 
     await fetchData();
     const data = $.data;
@@ -97,7 +97,7 @@ async function build() {
 
     console.log( "✂ clipping ..." );
 
-    const cubeGeom = new THREE.BoxGeometry( $.worldTileSize, 1000, $.worldTileSize, 1, 1, 1 );
+    const cubeGeom = new THREE.BoxGeometry( $.worldTileSize.width, 1000, $.worldTileSize.height, 1, 1, 1 );
     const cubeBrush = new Brush( cubeGeom );
 
     for ( const child of $.city.children ) {
@@ -105,9 +105,6 @@ async function build() {
         const result = evaluator.evaluate( childBrush, cubeBrush, INTERSECTION );    
         child.geometry = result.geometry;
     }
-
-    const s = 1000 / $.worldTileSize;
-    $.city.scale.set( s, s, s );
 
     console.timeEnd( "⏱ build" );
 

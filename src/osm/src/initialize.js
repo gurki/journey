@@ -19,21 +19,48 @@ function computeDerived() {
     const blXY = util.gpsToEnu( $.center, bottomLeft );
     const trXY = util.gpsToEnu( $.center, topRight );
 
-    $.localBounds = {
+    $.innerBounds = {
         xmin: blXY.x, xmax: trXY.x,
         ymin: blXY.y, ymax: trXY.y
     };
 
-    $.dimensions = {
-        width: $.localBounds.xmax - $.localBounds.xmin, 
-        height: $.localBounds.ymax - $.localBounds.ymin, 
-    };
+    const w = $.innerBounds.xmax - $.innerBounds.xmin;
+    const h = $.innerBounds.ymax - $.innerBounds.ymin;
+
+    $.innerDimensions = { width: w, height: h };
 
     for ( const type in $.config.colors ) {
         const color = $.config.colors[ type ];
-        $.materials[ type ] = new THREE.MeshStandardMaterial( { color } );
+        $.materials[ type ] = new THREE.MeshPhongMaterial( { color } );
     }
 
+    $.worldTileSize = $.config.scale * $.config.tileSize;
+    const tx = Math.ceil( w / $.worldTileSize );
+    const ty = Math.ceil( h / $.worldTileSize );
+    $.tileCount = { x: tx, y: ty };
+
+    const ow = $.worldTileSize;
+    const oh = $.worldTileSize;
+    // const ow = tx * $.worldTileSize;
+    // const oh = ty * $.worldTileSize;
+    $.outerDimensions = { width: ow, height: oh };
+    
+    const obl = { x:-ow / 2, y:-oh / 2 };
+    const otr = { x: ow / 2, y: oh / 2 };
+    $.outerBounds = {
+        xmin: obl.x, ymin: obl.y,
+        xmax: otr.x, ymax: otr.y
+    };
+
+    const wobl = util.enuToGps( $.center, obl );
+    const wotr = util.enuToGps( $.center, otr );
+    $.worldOuterBounds = {
+        ymin: wobl.latitude, xmin: wobl.longitude,
+        ymax: wotr.latitude, xmax: wotr.longitude
+    };
+
+    $.worldLayerHeight = $.config.layerHeightMm * $.config.scale / 1000;
+    
 }
 
 

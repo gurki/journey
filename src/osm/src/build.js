@@ -8,9 +8,9 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils";
 
 
 async function fetchData() {
-    // const data = await fetchGeojson( $.config.bounds );
-    const response = await fetch( "./results/hom.geojson" )
-    const data = await ( response ).json();
+    const data = await fetchGeojson( $.worldOuterBounds );
+    // const response = await fetch( "./results/hom.geojson" )
+    // const data = await ( response ).json();
     $.data = data;
 }
 
@@ -20,10 +20,10 @@ async function build() {
     console.time( "⏱ build" );
     
     const groundHeight = $.config.heights.ground;
-    const groundGeom = new THREE.BoxGeometry( $.dimensions.width, groundHeight, $.dimensions.height );
+    const groundGeom = new THREE.BoxGeometry( 1000, groundHeight, 1000 );
     const ground = new THREE.Mesh( groundGeom, $.materials.ground );
     ground.translateY( - groundHeight / 2 );
-    $.city.add( ground );
+    $.scene.add( ground );
 
     await fetchData();
     const data = $.data;
@@ -63,42 +63,41 @@ async function build() {
     //  merge objects
 
     const evaluator = new Evaluator();
-    // evaluator.consolidateMaterials = true;
-    // evaluator.useGroups = true;
-    
-    const pedestrian = new Brush( mergeGeometries( $.geometries.pedestrian ), $.materials.pedestrian );
-    const path = new Brush( mergeGeometries( $.geometries.path ), $.materials.path );
-    const street = new Brush( mergeGeometries( $.geometries.street ), $.materials.street );
-    const building = new Brush( mergeGeometries( $.geometries.building ), $.materials.building );
 
-    console.log( street.material.color );
-    console.log( building.material.color );
-    pedestrian.updateMatrixWorld();
-    path.updateMatrixWorld();
-    street.updateMatrixWorld();
-    building.updateMatrixWorld();
-    
-    // $.city.add( new THREE.Mesh( pedestrian, $.materials.pedestrian ) );
-    // $.city.add( new THREE.Mesh( path, $.materials.path ) );
-    // $.city.add( new THREE.Mesh( street, $.materials.street ) );
-    
-    // let pedestrian = new Brush( mergeGeometries( $.geometries.pedestrian ), $.materials.pedestrian );
-    // group = evaluator.evaluate( group, new Brush( path, $.materials.path ), ADDITION );
-    // group = evaluator.evaluate( group, new Brush( street, $.materials.street ), ADDITION );
-    
-    let res;
-    res = evaluator.evaluate( pedestrian, path, ADDITION );
-    res = evaluator.evaluate( res, street, ADDITION );
-    res = evaluator.evaluate( res, building, ADDITION );
-    $.city.add( res );
-    console.log( res );
+    for ( const type of Object.keys( $.geometries ) ) {
+        const geom = mergeGeometries( $.geometries[ type ] );
+        const mat = $.materials[ type ];    
+        $.city.add( new THREE.Mesh( geom, mat ) );
+    }
 
+    // // evaluator.consolidateMaterials = true;
+    // // evaluator.useGroups = true;
+    
+    // const pedestrian = new Brush( mergeGeometries( $.geometries.pedestrian ), $.materials.pedestrian );
+    // const path = new Brush( mergeGeometries( $.geometries.path ), $.materials.path );
+    // const street = new Brush( mergeGeometries( $.geometries.street ), $.materials.street );
+    // const buildings = new Brush( mergeGeometries( $.geometries.buildings ), $.materials.buildings );
+
+    // // $.city.add( new THREE.Mesh( pedestrian, $.materials.pedestrian ) );
+    // // $.city.add( new THREE.Mesh( path, $.materials.path ) );
+    // // $.city.add( new THREE.Mesh( street, $.materials.street ) );
+    
+    // // let pedestrian = new Brush( mergeGeometries( $.geometries.pedestrian ), $.materials.pedestrian );
+    // // group = evaluator.evaluate( group, new Brush( path, $.materials.path ), ADDITION );
+    // // group = evaluator.evaluate( group, new Brush( street, $.materials.street ), ADDITION );
+    
+    // let res;
+    // res = evaluator.evaluate( pedestrian, path, ADDITION );
+    // res = evaluator.evaluate( res, street, ADDITION );
+    // res = evaluator.evaluate( res, buildings, ADDITION );
+    // $.city.add( res );
+    
 
     //  clip
 
     console.log( "✂ clipping ..." );
 
-    const cubeGeom = new THREE.BoxGeometry( $.dimensions.width, 1000, $.dimensions.height, 1, 1, 1 );
+    const cubeGeom = new THREE.BoxGeometry( $.worldTileSize, 1000, $.worldTileSize, 1, 1, 1 );
     const cubeBrush = new Brush( cubeGeom );
 
     for ( const child of $.city.children ) {
@@ -106,6 +105,9 @@ async function build() {
         const result = evaluator.evaluate( childBrush, cubeBrush, INTERSECTION );    
         child.geometry = result.geometry;
     }
+
+    const s = 1000 / $.worldTileSize;
+    $.city.scale.set( s, s, s );
 
     console.timeEnd( "⏱ build" );
 
@@ -258,7 +260,7 @@ function generateBuilding( item ) {
     const levels = item.properties[ "building:levels" ] | $.config.defaults.levels;
     const height = levels * $.config.heights.buildings;
 
-    const type = "building";
+    const type = "buildings";
     const geom = generateExtrudedGeomtry( item.geometry, height );
     if ( ! ( type in $.geometries ) ) $.geometries[ type ] = [];
     $.geometries[ type ].push( geom );

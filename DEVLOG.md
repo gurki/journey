@@ -1,6 +1,14 @@
 # Devlog
 
 ## 24w24-3 
+_scaling and manifolds_
+
+<img src="docs/scale/2500.png" height=160>
+<img src="docs/scale/5000.png" height=160>
+<img src="docs/scale/7500.png" height=160>
+<img src="docs/scale/10000.png" height=160>
+
+### scaling
 - thinking about scale
 - https://minicity.art/blog/whatisscale
 - most trips max 5km x 5km
@@ -8,8 +16,16 @@
 - inputs: scale, tile size, bounding box
 - outputs: tiles xy
 
+### manifolds
+- tried bvh-csg to combine all elements into one without non-manifold edges
+- actually pretty confusing how the lib's supposed to be used
+- managed to merge everything, but materials get lost along the way
+- decide to merge for STL no-color export
+
 
 ## 24w24-2
+_small parts_
+
 - playing around with filtering tiny shapes that are not printable
 - https://editor.p5js.org/gurki/sketches/Y7mPPOHFH
 - conclude that it's best and easiest to just leave that to the slicer for now

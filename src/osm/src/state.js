@@ -1,5 +1,4 @@
 import * as THREE from "three";
-import { OperationGroup, Operation } from "three-bvh-csg";
 
 
 export const STATE = {
@@ -22,8 +21,9 @@ export const STATE = {
     config: {
         // bounds:  { ymin: 47.47749, xmin: 19.0287947, ymax: 47.52146, xmax: 19.0854007 }, //  total
         bounds: { ymin: 47.5089, xmin: 19.0722, ymax: 47.5190, xmax: 19.0867 }, //  hom
-        scale: 7500,
+        scale: 10000,
         tileSize: 0.2,
+        layerHeightMm: 0.2,   
         colors: {
             parks: "#2c4",      //  parks, gardens
             water: "#0ff",      //  lakes, rivers, oceans
@@ -62,9 +62,16 @@ export const STATE = {
         container: "container",
     },
     
-    center: null,
-    localBounds: null,
-    dimensions: null,
     materials: {},
+
+    center: null,
+    innerBounds: null,
+    innerDimensions: null,
+    outerBounds: null,
+    outerDimensions: null,
+    worldOuterBounds: null,
+    worldTileSize: null,
+    worldLayerHeight: null,
+    tileCount: null
         
 }

@@ -22,6 +22,7 @@ export const STATE = {
         // bounds:  { ymin: 47.47749, xmin: 19.0287947, ymax: 47.52146, xmax: 19.0854007 }, //  total
         bounds: { ymin: 47.5089, xmin: 19.0722, ymax: 47.5190, xmax: 19.0867 }, //  hom
         scale: 7500,
+        renderScale: 1000,
         tileSize: { width: 0.15, height: 0.15 },
         layerHeightMm: 0.2,   
         colors: {
@@ -36,33 +37,33 @@ export const STATE = {
             railway: "#666",    //  rails
             ground: "#161616",  //  baseplate
         },
-        heights: {
-            parks: 1,
-            water: 2,
-            stone: 2,
-            greenery: 2,
-            buildings: 5,   //  per level
+        heights: {          //  [printLayers] if not stated otherwise
+            ground: 3,
+            water: 1,
+            railway: 3,     
+            parks: 2,
+            stone: 3,
+            greenery: 3,
             street: 3,
-            path: 4,
-            pedestrian: 2,
-            railway: 2,
-            ground: 10,
+            pedestrian: 4,
+            path: 5,
+            buildings: 5,   //  [m] per level
         },
-        widths: {
-            base: 4, //  fallback, e.g. neither lanes nor width
+        widths: {           //  [m]
+            base: 4,        //  fallback, e.g. neither lanes nor width
             propWidth: 1,
             propLane: 5, 
             railway: 3,
         },
         defaults: {
             lanes: 1,
-            levels: 4,
-            steps: 20
+            levels: 4
         },
         container: "container",
     },
     
     materials: {},
+    heights: {},
 
     center: null,
     innerBounds: null,
@@ -72,6 +73,6 @@ export const STATE = {
     worldOuterBounds: null,
     worldTileSize: null,
     worldLayerHeight: null,
-    tileCount: null
-        
+    tileCount: null,
+
 }

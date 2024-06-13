@@ -64,6 +64,11 @@ function computeDerived() {
 
     $.worldLayerHeight = $.config.layerHeightMm * $.config.scale / 1000;
     
+    for ( const type of Object.keys( $.config.heights ) ) {
+        $.heights[ type ] = $.config.scale * $.config.heights[ type ] * $.config.layerHeightMm / 1000;
+    }
+
+    console.log( $.heights );
 }
 
 
@@ -82,12 +87,11 @@ function initRenderer() {
     $.container.appendChild( $.renderer.domElement );
 
     $.camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 10000 );
-    // $.camera.position.set( 0, 1000, 1000 );
-    $.camera.position.set( 0, 1280, 1280 );
+    $.camera.position.set( 0, 160, 160 );
 
     $.controls = new MapControls( $.camera, $.renderer.domElement );
     $.controls.enableDamping = true;
-    $.controls.target.set( 0, 0, 100 );
+    $.controls.target.set( 0, 0, 10 );
     $.controls.update();
 
     window.addEventListener( "resize", resize, false );
@@ -99,21 +103,24 @@ function initScene() {
     
     $.scene = new THREE.Scene();
 
-    const size = 1000;
-    const divisions = 10;
-    const gridHelper = new THREE.GridHelper( size, divisions, "#444", "#222" );
-    $.scene.add( gridHelper );
+    // const size = 1000;
+    // const divisions = 10;
+    // const gridHelper = new THREE.GridHelper( size, divisions, "#444", "#222" );
+    // $.scene.add( gridHelper );
 
-    const axesHelper = new THREE.AxesHelper( 100 );
-    $.scene.add( axesHelper );
+    // const axesHelper = new THREE.AxesHelper( 100 );
+    // $.scene.add( axesHelper );
 
-	let ambient = new THREE.AmbientLight( 0xffffff, 0.2 );
+	const ambient = new THREE.AmbientLight( 0xffffff, 0.2 );
     let sun = new THREE.DirectionalLight( 0xffffff, Math.PI );
     sun.position.set( 300, 500, 100 );
 	$.scene.add( ambient );
 	$.scene.add( sun );
 
     $.scene.add( $.city );
+
+    const s = $.config.renderScale / $.config.scale;
+    $.scene.scale.set( s, s, s );
 
 }
 

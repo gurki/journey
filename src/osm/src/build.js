@@ -8,9 +8,9 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils";
 
 
 async function fetchData() {
-    // const data = await fetchGeojson( $.worldOuterBounds );
-    const response = await fetch( "./results/hom.geojson" )
-    const data = await ( response ).json();
+    const data = await fetchGeojson( $.worldOuterBounds );
+    // const response = await fetch( "./results/hom.geojson" )
+    // const data = await ( response ).json();
     $.data = data;
 }
 
@@ -19,7 +19,7 @@ async function build() {
 
     console.time( "⏱ build" );
     
-    const groundHeight = $.config.heights.ground;
+    const groundHeight = $.heights.ground;
     const groundGeom = new THREE.BoxGeometry( $.worldTileSize.width, groundHeight, $.worldTileSize.height );
     const ground = new THREE.Mesh( groundGeom, $.materials.ground );
     ground.translateY( - groundHeight / 2 );
@@ -234,7 +234,7 @@ function generateNatural( item ) {
         default: type = "greenery";
     }
 
-    const height = $.config.heights[ type ];
+    const height = $.heights[ type ];
     const geom = generateExtrudedGeomtry( item.geometry, height );
     const mesh = new THREE.Mesh( geom, $.materials[ type ] );
     $.city.add( mesh );
@@ -244,7 +244,7 @@ function generateNatural( item ) {
 
 function generateLeisure( item ) {
 
-    const height = $.config.heights.parks;
+    const height = $.heights.parks;
     const geom = generateExtrudedGeomtry( item.geometry, height );
     const mesh = new THREE.Mesh( geom, $.materials.parks );
     $.city.add( mesh );
@@ -255,7 +255,7 @@ function generateLeisure( item ) {
 function generateBuilding( item ) {
 
     const levels = item.properties[ "building:levels" ] | $.config.defaults.levels;
-    const height = levels * $.config.heights.buildings;
+    const height = levels * $.heights.buildings;
 
     const type = "buildings";
     const geom = generateExtrudedGeomtry( item.geometry, height );
@@ -282,7 +282,7 @@ function generateHighway( item ) {
     else if ( props.lanes ) width = props.lanes * $.config.widths.propLane;
     else width = $.config.widths.base;
 
-    const height = $.config.heights[ type ];
+    const height = $.heights[ type ];
     const geom = generateExtrudedGeomtry( item.geometry, height, width );
     if ( ! ( type in $.geometries ) ) $.geometries[ type ] = [];
     $.geometries[ type ].push( geom );
@@ -293,7 +293,7 @@ function generateHighway( item ) {
 function generateRailway( item ) {
         
     const width = $.config.widths.railway;
-    const height = $.config.heights.railway;
+    const height = $.heights.railway;
     
     const geom = generateExtrudedGeomtry( item.geometry, height, width );
     const mesh = new THREE.Mesh( geom, $.materials.railway );

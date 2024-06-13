@@ -1,5 +1,13 @@
 # Devlog
 
+## 24w24-3 
+- thinking about scale
+- https://minicity.art/blog/whatisscale
+- most trips max 5km x 5km
+- 10k (city) / 7.5k (district) / 5k (block) / 2.5k (street)
+- inputs: scale, tile size, bounding box
+- outputs: tiles xy
+
 
 ## 24w24-2
 - playing around with filtering tiny shapes that are not printable

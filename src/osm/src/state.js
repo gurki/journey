@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { OperationGroup, Operation } from "three-bvh-csg";
 
 
 export const STATE = {
@@ -14,21 +15,26 @@ export const STATE = {
     controls: null,
 
     data: null,
+    operations: {},
     geometries: {},
     city: new THREE.Group(),
     
     config: {
+        // bounds:  { ymin: 47.47749, xmin: 19.0287947, ymax: 47.52146, xmax: 19.0854007 }, //  total
+        bounds: { ymin: 47.5089, xmin: 19.0722, ymax: 47.5190, xmax: 19.0867 }, //  hom
+        scale: 7500,
+        tileSize: 0.2,
         colors: {
-            parks: "#2c4",
-            water: "#0ff",
-            stone: "#cc7",
-            greenery: "#294",
-            buildings: "#ccc",
-            street: "#777",
-            path: "#aaa",
-            pedestrian: "#555",
-            railway: "#666",
-            ground: "#161616",
+            parks: "#2c4",      //  parks, gardens
+            water: "#0ff",      //  lakes, rivers, oceans
+            stone: "#cc7",      //  stones, rocks, boulders
+            greenery: "#294",   //  trees, bushes, shrubbery
+            buildings: "#ccc",  //  houses and more
+            street: "#777",     //  often has "lanes" 
+            path: "#aaa",       //  often has "width"
+            pedestrian: "#555", //  highway, but polygon
+            railway: "#666",    //  rails
+            ground: "#161616",  //  baseplate
         },
         heights: {
             parks: 1,
@@ -53,8 +59,6 @@ export const STATE = {
             levels: 4,
             steps: 20
         },
-        // bounds:  { ymin: 47.47749, xmin: 19.0287947, ymax: 47.52146, xmax: 19.0854007 }, //  total
-        bounds: { ymin: 47.5089, xmin: 19.0722, ymax: 47.5190, xmax: 19.0867 }, //  hom
         container: "container",
     },
     

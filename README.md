@@ -39,3 +39,7 @@
 - https://sbcode.net/threejs/csg/#srcclientutilscsgmeshts
 - https://github.com/gkjohnson/three-bvh-csg
 - https://threejs.org/docs/#api/en/geometries/ExtrudeGeometry
+
+### printing
+- https://minicity.art/blog/whatisscale
+- https://makerworld.com/en/models/102151

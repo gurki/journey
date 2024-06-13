@@ -31,7 +31,7 @@ function computeDerived() {
 
     for ( const type in $.config.colors ) {
         const color = $.config.colors[ type ];
-        $.materials[ type ] = new THREE.MeshPhongMaterial( { color } );
+        $.materials[ type ] = new THREE.MeshStandardMaterial( { color } );
     }
 
 }
@@ -52,7 +52,8 @@ function initRenderer() {
     $.container.appendChild( $.renderer.domElement );
 
     $.camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 10000 );
-    $.camera.position.set( 0, 1000, 1000 );
+    // $.camera.position.set( 0, 1000, 1000 );
+    $.camera.position.set( 0, 1280, 1280 );
 
     $.controls = new MapControls( $.camera, $.renderer.domElement );
     $.controls.enableDamping = true;

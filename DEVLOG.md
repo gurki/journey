@@ -1,7 +1,9 @@
 # Devlog
 
-## 24w24-4
+## 24w24-4..25-1
+_view and layer scaling_
 
+- 
 
 
 ## 24w24-3 

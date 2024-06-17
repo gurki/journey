@@ -43,3 +43,13 @@
 ### printing
 - https://minicity.art/blog/whatisscale
 - https://makerworld.com/en/models/102151
+
+### vector tiles
+- https://docs.mapbox.com/api/maps/vector-tiles/
+- https://github.com/mapbox/tippecanoe?tab=readme-ov-file#zoom-levels
+- https://data.maptiler.com/downloads/planet/
+- https://github.com/mapbox/tile-cover
+
+### gpx
+- https://github.com/mapbox/togeojson
+- https://github.com/mapbox/geojson-tidy

@@ -1,0 +1,261 @@
+{
+  "header": {
+    "byteOffset": 0,
+    "byteLength": 146232,
+    "hasBinChunk": true
+  },
+  "type": "glTF",
+  "version": 2,
+  "json": {
+    "accessors": [
+      {
+        "componentType": 5123,
+        "count": 51006,
+        "max": [
+          21525
+        ],
+        "min": [
+          0
+        ],
+        "type": "SCALAR"
+      },
+      {
+        "componentType": 5126,
+        "count": 21322,
+        "type": "VEC3"
+      },
+      {
+        "componentType": 5126,
+        "count": 21322,
+        "max": [
+          8071.564267023688,
+          8674.010046250325,
+          160.00460944593706
+        ],
+        "min": [
+          7007.637902968424,
+          7320.440637343424,
+          -0.005165345174671463
+        ],
+        "type": "VEC3"
+      },
+      {
+        "componentType": 5126,
+        "count": 21322,
+        "type": "VEC2"
+      },
+      {
+        "componentType": 5123,
+        "count": 21322,
+        "type": "VEC2"
+      },
+      {
+        "componentType": 5123,
+        "count": 129,
+        "max": [
+          45
+        ],
+        "min": [
+          1
+        ],
+        "type": "SCALAR"
+      },
+      {
+        "componentType": 5126,
+        "count": 45,
+        "max": [
+          8062.1391490473925,
+          8666.59496676641,
+          0.005123016409459722
+        ],
+        "min": [
+          7007.637943389841,
+          7323.621830108591,
+          -0.005123016409459722
+        ],
+        "type": "VEC3"
+      }
+    ],
+    "asset": {
+      "generator": "tinygltf",
+      "version": "2.0"
+    },
+    "bufferViews": [
+      {
+        "buffer": 0,
+        "byteOffset": 0,
+        "byteLength": 117059
+      },
+      {
+        "buffer": 0,
+        "byteOffset": 117064,
+        "byteLength": 375
+      },
+      {
+        "buffer": 0,
+        "byteOffset": 117440,
+        "byteLength": 24836
+      }
+    ],
+    "buffers": [
+      {
+        "name": "buffer",
+        "byteLength": 142280
+      }
+    ],
+    "extensionsUsed": [
+      "MAPBOX_mesh_features",
+      "KHR_draco_mesh_compression"
+    ],
+    "extras": {
+      "mapbox:coordinate-space": "tile-space",
+      "mapbox:footprint-quantized": true,
+      "mapbox:footprint-version": "1.0.0",
+      "mapbox:tile-version": "1.0.0"
+    },
+    "images": [
+      {
+        "bufferView": 2,
+        "mimeType": "image/jpeg"
+      }
+    ],
+    "materials": [
+      {
+        "doubleSided": true,
+        "occlusionTexture": {
+          "index": 0,
+          "texCoord": 0
+        },
+        "pbrMetallicRoughness": {
+          "metallicFactor": 0,
+          "baseColorFactor": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "roughnessFactor": 1
+        },
+        "emissiveFactor": [
+          0,
+          0,
+          0
+        ],
+        "alphaMode": "OPAQUE"
+      },
+      {
+        "name": "default",
+        "emissiveFactor": [
+          0,
+          0,
+          0
+        ],
+        "alphaMode": "OPAQUE",
+        "doubleSided": false
+      }
+    ],
+    "meshes": [
+      {
+        "primitives": [
+          {
+            "attributes": {
+              "NORMAL": 1,
+              "POSITION": 2,
+              "TEXCOORD_0": 3,
+              "_FEATURE_RGBA4444": 4
+            },
+            "extensions": {
+              "MAPBOX_mesh_features": {},
+              "KHR_draco_mesh_compression": {
+                "bufferView": 0,
+                "attributes": {
+                  "NORMAL": 0,
+                  "POSITION": 1,
+                  "TEXCOORD_0": 2,
+                  "_FEATURE_RGBA4444": 3
+                }
+              }
+            },
+            "indices": 0,
+            "material": 0,
+            "mode": 4
+          }
+        ]
+      },
+      {
+        "primitives": [
+          {
+            "attributes": {
+              "POSITION": 6
+            },
+            "indices": 5,
+            "mode": 4,
+            "material": 1,
+            "extensions": {
+              "KHR_draco_mesh_compression": {
+                "bufferView": 1,
+                "attributes": {
+                  "POSITION": 0
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "nodes": [
+      {
+        "extras": {
+          "anchor": [
+            7532,
+            8039
+          ],
+          "id": "3074648",
+          "lights": "SwAAAGPu+UUR6+dFVhL6RVP+50UxAAAASwAAAAXh+EVMt+dF5jr5RXPn50UyAAAASwAAAF2090WuueZFUNj3RfDM5kUyAAAASwAAAME++EVdYOdFo5j4RYWQ50UyAAAAWQAAAL2k9UW2JeZFitn1RYfn5UUyAAAAWQAAAGx08kUW5+lFBd7yRblq6UUyAAAAWQAAAKr28EWvqOtFdivxRYFq60UyAAAAWgAAAJai+EVZmvJFIVH4Rbye8kUxAAAAWQAAAAnw+kWZBu9FQs76RTR870UyAAAAWQAAACZc+kV+CfFFXzr6RRl/8UUyAAAAWgAAAFbI+0U4FelF0bH7RZ9j6UUyAAAAWQAAADaZ+kWZNO1FLGz6RWjR7UUyAAAAWgAAAIpf+0UUgupFBkn7RXvQ6kUyAAAAWQAAAIPU70XrEu5FCqvvRa3M7UUyAAAAaQAAAHrI9EUjngJGsJ/0RTTEAkYyAAAAaQAAAFAt9UUHQAJGhgT1RRhmAkYxAAAAaQAAAOX69EUVbwJGG9L0RSaVAkYxAAAAaQAAAEUh4kX2n/tFDkriRdRT+0UxAAAAaQAAABuG4kW+4/pF5a7iRZuX+kUyAAAAaQAAALBT4kXaQftFenziRbf1+kUxAAAAaQAAAA0M80UAxgVG4+LyRZcIBkYyAAAAaQAAAJ2Z80UD4QRGc3DzRZkjBUYxAAAAaQAAAG1q80VXLQVGQ0HzRe5vBUYxAAAAaQAAAD0780WseQVGExLzRUK8BUYyAAAAaQAAABQQ9EViIQRG/ffzRVpIBEYyAAAAaAAAAKFG30Uj3QBGuf7eReDJAEYyAAAAaAAAAIKg30U39QBGm1jfRfThAEYyAAAAaAAAABtX4kVHrwFGMw/iRQScAUYyAAAAaAAAAPbC4kUrzAFGD3viRei4AUYyAAAAaAAAADnw5EVyYQJGUqjkRS9OAkYyAAAAaAAAAAWJ5UVgigJGLRTlRRNrAkYyAAAAaAAAAHrG70WYSAVGmFrvRbErBUYyAAAAaAAAAHY85EVLMQJG0i7jRRDpAUYyAAAAUgAAAAru6UXeSANGWgTpRUQKA0YyAAAAUgAAAGDy6EV0BQNGrwjoRdrGAkYyAAAAUAAAALYd70WDrARGonfuRQaABEYyAAAAUQAAALRB7kWUcQRGn5vtRRdFBEYyAAAAaQAAAG6y7UXb//BF8nvuRVd/8EUyAAAAaQAAANzK7EW9m/FFy5DtRfIV8UUyAAAAaQAAAP9b6EXSsfVF5froRYX39EUyAAAAaQAAAJgM6EXrDvZFiEHoRdrQ9UUyAAAAaQAAAHEW6UVK2/RFWU/pRdig9EUyAAAAaQAAANR25UXRvflFnc3lRaoz+UUyAAAAaQAAADxf9kU9JPxFJBz2RcYP/UUyAAAAaQAAAJx49kXprftFemf2Rar9+0UyAAAAaQAAAPgQ9kUAN/1Fn/r1RXSF/UUyAAAAaQAAAPsP90UAPvZFgA73Re4J90UxAAAAaQAAAEML90UxF/VFOA/3RRfj9UUyAAAA"
+        },
+        "mesh": 0
+      },
+      {
+        "extras": {
+          "mapbox:footprint:id": "3074648",
+          "mapbox:footprint:version": "1.0.0"
+        },
+        "mesh": 1
+      }
+    ],
+    "samplers": [
+      {
+        "magFilter": 9729,
+        "minFilter": 9987,
+        "wrapS": 10497,
+        "wrapT": 10497
+      }
+    ],
+    "scenes": [
+      {
+        "name": "Default Scene",
+        "nodes": [
+          0,
+          1
+        ]
+      }
+    ],
+    "textures": [
+      {
+        "sampler": 0,
+        "source": 0
+      }
+    ],
+    "scene": 0,
+    "extensionsRequired": [
+      "KHR_draco_mesh_compression"
+    ]
+  },
+  "binChunks": [
+    {
+      "byteOffset": 3952,
+      "byteLength": 142280,
+      "arrayBuffer": {}
+    }
+  ]
+}

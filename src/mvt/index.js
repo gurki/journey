@@ -9,73 +9,75 @@ import { GPXLoader } from '@loaders.gl/kml';
 import fs from "fs"
 
 
-// Function to fetch and parse vector tiles
-async function fetchAndParseTile(urlTemplate, tile, accessToken) {
-  
-    const url = urlTemplate
-        .replace('{z}', tile[2])
-        .replace('{x}', tile[0])
-        .replace('{y}', tile[1]) + `?access_token=${accessToken}`;
-
-    return await load( url, MVTLoader,  {
-        mvt: {
-        coordinates: 'wgs84',
-        tileIndex: {
-            x: tile[0],
-            y: tile[1],
-            z: tile[2]
-        }
-        }
-    });
-
+function tileIndicesForBounds( bbox, zoom ) {
     
-  
-    // const response = await fetch(url);
-    // const arrayBuffer = await response.arrayBuffer();
-    // const pbf = new Pbf(new Uint8Array(arrayBuffer));
-    // const vectorTile = new VectorTile(pbf);
-    // return vectorTile;
-}
-
-
-
-// Example usage
-async function fetchTilesForBoundingBox(bbox, zoom, urlTemplate, accessToken) {
-    
-    // const tiles = bboxToTileIndices( bbox, zoom );
-    const p1 = tilebelt.pointToTile( bbox[1], bbox[0], zoom );
-    const p2 = tilebelt.pointToTile( bbox[3], bbox[2], zoom );
+    const p1 = tilebelt.pointToTile( bbox.xmin, bbox.ymin, zoom );
+    const p2 = tilebelt.pointToTile( bbox.xmax, bbox.ymax, zoom );
     
     let tiles = [];
 
     for ( let x = p1[0]; x <= p2[0]; x++ ) {
         for ( let y = p1[1]; y <= p2[1]; y++ ) {
-            tiles.push( [ x, y, zoom ] );        
+            tiles.push( { x, y, z: zoom } );        
         }
     }
 
-    const vectorTiles = [];
-
-    for (const tile of tiles) {
-        console.log( `fetching ${tile} ...` );
-        const vectorTile = await fetchAndParseTile(urlTemplate, tile, accessToken);
-        vectorTile.index = tile;
-        vectorTiles.push(vectorTile);
-    }
-
-    return vectorTiles;
+    return tiles;
 
 }
 
-// Define the bounding box and zoom level
-const bbox = [ 47.5190, 19.0722, 47.5089, 19.0867 ];
+
+async function fetchTile( urlTemplate, tile, accessToken ) {
+  
+    const url = urlTemplate
+        .replace( '{x}', tile.x )
+        .replace( '{y}', tile.y )
+        .replace( '{z}', tile.z )
+        + `?access_token=${accessToken}`;
+
+    const options = {
+        mvt: {
+            coordinates: 'wgs84',
+            tileIndex: tile
+        }
+    };
+
+    return await load( url, MVTLoader, options );
+
+}
+
+
+async function fetchTilesForBounds( bbox, zoom, urlTemplate, accessToken ) {
+    
+    const indices = tileIndicesForBounds( bbox, zoom );
+    const tiles = [];
+    let count = 0;
+
+    for ( const index of indices ) {
+
+        count += 1;
+        console.log( `📥 fetching ${index} (${count}/${indices.length})...` );
+        
+        const tile = await fetchAndParseTile( urlTemplate, index, accessToken );
+        tile.index = tile;
+        tiles.push( tile );
+
+    }
+
+    return tiles;
+
+}
+
+
+const bbox = { xmin: 19.0722, ymin: 47.5190, xmax: 19.0867, ymax: 47.5089 };
 const zoom = 14;
 const accessToken = 'pk.eyJ1IjoidGd1cmRhbiIsImEiOiJjbHhqODE5MnIxaHpxMmlzM2VjbWthMGdxIn0.1Pix25iPyLlNetjOtghK1w';
 const urlTemplate = 'https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/{z}/{x}/{y}.mvt';
+
 // const urlTemplate = 'https://api.mapbox.com/v4/mapbox.mapbox-bathymetry-v2,mapbox.mapbox-streets-v8,mapbox.mapbox-terrain-v2,mapbox.mapbox-models-v1/14/8295/5634.vector.pbf?sku=101lREwqwf5Rh&access_token=pk.eyJ1IjoiZXhhbXBsZXMiLCJhIjoiY2p0MG01MXRqMW45cjQzb2R6b2ptc3J4MSJ9.zA2W0IkI0c6KaAhJfk9bWg';
 
 // // Fetch and parse the vector tiles
-// fetchTilesForBoundingBox(bbox, zoom, urlTemplate, accessToken)
+// fetchTilesForBounds(bbox, zoom, urlTemplate, accessToken)
 //     .then( vectorTiles => {
 //         const buildings = [];
 //         for ( const tile of vectorTiles ) {

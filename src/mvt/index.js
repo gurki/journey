@@ -1,17 +1,12 @@
-// Import required libraries
-import { VectorTile } from "@mapbox/vector-tile";
+import { VectorTile } from 'open-vector-tile'
 import * as tilebelt from "@mapbox/tilebelt"
-import Pbf from "pbf";
-import vt2geojson from "@mapbox/vt2geojson";
-import fs from "fs"
-import {load} from '@loaders.gl/core';
-import {GLBLoader} from '@loaders.gl/gltf';
-import {GLTFWriter} from '@loaders.gl/gltf';
-import {encodeSync} from '@loaders.gl/core';
-import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-import {MVTLoader} from '@loaders.gl/mvt';
+import { load, parse } from '@loaders.gl/core';
+import { GLBLoader } from '@loaders.gl/gltf';
+import { MVTLoader } from '@loaders.gl/mvt';
+import { GPXLoader } from '@loaders.gl/kml';
+
+import fs from "fs"
 
 
 // Function to fetch and parse vector tiles
@@ -74,34 +69,34 @@ async function fetchTilesForBoundingBox(bbox, zoom, urlTemplate, accessToken) {
 
 // Define the bounding box and zoom level
 const bbox = [ 47.5190, 19.0722, 47.5089, 19.0867 ];
-const zoom = 17;
+const zoom = 14;
 const accessToken = 'pk.eyJ1IjoidGd1cmRhbiIsImEiOiJjbHhqODE5MnIxaHpxMmlzM2VjbWthMGdxIn0.1Pix25iPyLlNetjOtghK1w';
 const urlTemplate = 'https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/{z}/{x}/{y}.mvt';
 // const urlTemplate = 'https://api.mapbox.com/v4/mapbox.mapbox-bathymetry-v2,mapbox.mapbox-streets-v8,mapbox.mapbox-terrain-v2,mapbox.mapbox-models-v1/14/8295/5634.vector.pbf?sku=101lREwqwf5Rh&access_token=pk.eyJ1IjoiZXhhbXBsZXMiLCJhIjoiY2p0MG01MXRqMW45cjQzb2R6b2ptc3J4MSJ9.zA2W0IkI0c6KaAhJfk9bWg';
 
-// Fetch and parse the vector tiles
-fetchTilesForBoundingBox(bbox, zoom, urlTemplate, accessToken)
-    .then( vectorTiles => {
-        const buildings = [];
-        for ( const tile of vectorTiles ) {
-            for ( const item of tile ) {
-                if ( item.properties.layerName !== "building" ) continue;
-                buildings.push( item );
-            }
-        }
-        console.log( buildings.length );
-    // console.log( tile.layers.road );
-    // console.log( tile.layers.road.feature( 0 ).toGeoJSON( 4822, 6162, 14 ) );
-    // console.log( tile.layers.road.feature( 0 ).properties );
-    // console.log( tile.layers.road.feature( 0 ).loadGeometry() );
-    //   for ( const item in  ) {
-        // console.log( item );
-    // }
-    // Process the vector tiles as needed
-  })
-  .catch(error => {
-    console.error('Error fetching or parsing vector tiles:', error);
-  });
+// // Fetch and parse the vector tiles
+// fetchTilesForBoundingBox(bbox, zoom, urlTemplate, accessToken)
+//     .then( vectorTiles => {
+//         const buildings = [];
+//         for ( const tile of vectorTiles ) {
+//             for ( const item of tile ) {
+//                 if ( item.properties.layerName !== "building" ) continue;
+//                 buildings.push( item );
+//             }
+//         }
+//         console.log( buildings.length );
+//     // console.log( tile.layers.road );
+//     // console.log( tile.layers.road.feature( 0 ).toGeoJSON( 4822, 6162, 14 ) );
+//     // console.log( tile.layers.road.feature( 0 ).properties );
+//     // console.log( tile.layers.road.feature( 0 ).loadGeometry() );
+//     //   for ( const item in  ) {
+//         // console.log( item );
+//     // }
+//     // Process the vector tiles as needed
+//   })
+//   .catch(error => {
+//     console.error('Error fetching or parsing vector tiles:', error);
+//   });
 
 
 
@@ -134,3 +129,33 @@ fetchTilesForBoundingBox(bbox, zoom, urlTemplate, accessToken)
 // console.log( gltf );
 // const arrayBuffer = encodeSync(gltf, GLTFWriter);
 // console.log( arrayBuffer );
+
+// https://api.mapbox.com/v4/mapbox.mapbox-bathymetry-v2,mapbox.mapbox-streets-v8,mapbox.mapbox-terrain-v2,mapbox.mapbox-models-v1/14/8298/5639.vector.pbf?sku=101lREwqwf5Rh&access_token=pk.eyJ1IjoiZXhhbXBsZXMiLCJhIjoiY2p0MG01MXRqMW45cjQzb2R6b2ptc3J4MSJ9.zA2W0IkI0c6KaAhJfk9bWg
+// const response = await fetch("https://api.mapbox.com/v4/mapbox.mapbox-models-v1/14/8298/5639.vector.pbf?access_token=pk.eyJ1IjoidGd1cmRhbiIsImEiOiJjbHhqODE5MnIxaHpxMmlzM2VjbWthMGdxIn0.1Pix25iPyLlNetjOtghK1w" );
+// console.log( response );
+
+// const arrayBuffer = new Uint8Array( await response.arrayBuffer() );
+const pbf = fs.readFileSync( "data/5637.vector.pbf" );
+// const pbf = new Pbf(new Uint8Array(arrayBuffer));
+const vectorTile = new VectorTile( pbf );
+
+const layer = vectorTile.layers.structure;
+// console.log( layer );
+for ( let i = 0; i < layer.length; i++ ) {
+    const feature = layer.feature( i );
+    // console.log( feature );
+}
+
+
+const glb = fs.readFileSync( "data/5637.glb" );
+const gltf = await load( glb, GLBLoader );
+// console.log( gltf );
+
+
+const gpx = fs.readFileSync( "data/2024-05-28.gpx" );
+const path = await parse( gpx, GPXLoader );
+
+for ( const feature of path.features ) {
+    // if ( feature.geometry.type === "Point" ) continue;
+    console.log( feature.properties.time );
+}

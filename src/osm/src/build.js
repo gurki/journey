@@ -1,17 +1,32 @@
 import { STATE as $ } from "./state.js";
 import * as util from "../../arc/src/util.js";
 import { fetchGeojson } from "./fetch.js";
+import { fetchTilesForBounds } from "../../mvt/index.js"
 import { INTERSECTION, Brush, Evaluator, Operation, ADDITION, OperationGroup } from 'three-bvh-csg';
 
 import * as THREE from "three"
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils";
 
 
+// async function fetchData() {
+//     const data = await fetchGeojson( $.worldOuterBounds );
+//     // const response = await fetch( "./results/hom-osm.geojson" )
+//     // const data = await ( response ).json();
+//     $.data = data;
+// }
+
 async function fetchData() {
-    const data = await fetchGeojson( $.worldOuterBounds );
-    // const response = await fetch( "./results/hom.geojson" )
-    // const data = await ( response ).json();
-    $.data = data;
+
+    // const ACCESS_TOKEN = 'pk.eyJ1IjoidGd1cmRhbiIsImEiOiJjbHhqODE5MnIxaHpxMmlzM2VjbWthMGdxIn0.1Pix25iPyLlNetjOtghK1w';
+    // const URL_TEMPLATE = 'https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/{z}/{x}/{y}.vector.pbf';
+    // const zoom = 15;
+    // const data = await fetchTilesForBounds( $.worldOuterBounds, 15, URL_TEMPLATE, ACCESS_TOKEN );
+    // $.data = data;
+
+    const response = await fetch( "./results/hom-mvt-15.geojson" );
+    const tiles = await response.json();
+    $.data = tiles.flat();
+
 }
 
 
@@ -26,12 +41,15 @@ async function build() {
     $.city.add( ground );
 
     await fetchData();
-    const data = $.data;
-    const features = data.features;
+    const features = $.data;
 
     console.log( "👷‍♀️ building city ..." );
     
     //  extrude geometry
+
+    // let layerNames = new Set();
+    // let types = {};
+    // let classes = {};
 
     features.forEach( ( feature, index ) => {
 
@@ -42,22 +60,29 @@ async function build() {
         if ( feature.geometry.type === "Point" ) {
             return;
         }
-
+        
         const props = feature.properties;       
+        const name = props.layerName;
+        // layerNames.add( name );
+        // if ( ! ( name in types ) ) types[ name ] = new Set();
+        // if ( ! ( name in classes ) ) classes[ name ] = new Set();
+        // types[ name ].add( props.type );
+        // classes[ name ].add( props.class );
 
-        if ( props.building ) {
-            generateBuilding( feature );
-        } else if ( props.highway ) {
-            generateHighway( feature );
-        } else if ( props.railway ) {
-            generateRailway( feature );
-        } else if ( props.natural ) {
-            generateNatural( feature );
-        } else if ( props.leisure ) {
-            generateLeisure( feature );
+        switch ( name ) {
+            case "building": generateBuilding( feature ); break;
+            case "water": generateWater( feature ); break;
+            case "road": generateRoad( feature ); break;
+            case "landuse":
+            case "structure":   //  hedge
+            case "landuse_overlay": geenerateLanduse( feature ); break;
         }
 
     });
+
+    // console.log( layerNames );
+    // console.log( types );
+    // console.log( classes );
 
 
     //  merge objects
@@ -147,7 +172,7 @@ function geometryFromLineString( polygon, width = 5, height = 2 ) {
     shape.lineTo( 0, width / 2 );
     shape.lineTo( 0, - width / 2 );
 
-    const steps = polygon.length;
+    const steps = polygon.length * 2;
     
     let geom = new THREE.ExtrudeGeometry( shape, {     
         steps,
@@ -193,6 +218,17 @@ function geometryFromMultiPolygons( multiPolygons, height ) {
 }
 
 
+function geometryFromMultiLineString( multiLines, height ) {
+
+    const geometries = multiLines.map( lines =>
+        geometryFromLineString( lines, height )    
+    );
+
+    return mergeGeometries( geometries );
+
+}
+
+
 function geometryFromPolygons( polygons, height ) {
 
     const shape = compositeFromPolygons( polygons );
@@ -211,12 +247,13 @@ function geometryFromPolygons( polygons, height ) {
 }
 
 
-function generateExtrudedGeomtry( geometry, height, width ) {
+function generateExtrudedGeometry( geometry, height, width ) {
 
     switch ( geometry.type ) {
         case "Polygon": return geometryFromPolygons( geometry.coordinates, height );
         case "MultiPolygon": return geometryFromMultiPolygons( geometry.coordinates, height );
         case "LineString": return geometryFromLineString( geometry.coordinates, width, height );
+        case "MultiLineString": return geometryFromMultiLineString( geometry.coordinates, width, height );
     }
      
     console.error( `unknown geometry type ${geometry.type}` );
@@ -224,29 +261,56 @@ function generateExtrudedGeomtry( geometry, height, width ) {
 }
 
 
-function generateNatural( item ) {
+function generateWater( item ) {
 
-    let type; 
-
-    switch ( item.properties.natural ) {
-        case "water": type = "water"; break;
-        case "bare_rock": type = "stone"; break;
-        default: type = "greenery";
-    }
-
+    const type = "water";
     const height = $.heights[ type ];
-    const geom = generateExtrudedGeomtry( item.geometry, height );
+    const geom = generateExtrudedGeometry( item.geometry, height );
     const mesh = new THREE.Mesh( geom, $.materials[ type ] );
     $.city.add( mesh );
 
 }
 
 
-function generateLeisure( item ) {
+function geenerateLanduse( item ) {
+    
+    const EXCLUDE_CLASSES = [ 
+        "cliff",  
+        "fence", "gate", 
+        "commercial_area", "industrial", 
+        "parking", "hospital", "school"
+    ];
 
-    const height = $.heights.parks;
-    const geom = generateExtrudedGeomtry( item.geometry, height );
-    const mesh = new THREE.Mesh( geom, $.materials.parks );
+    const PARK_CLASSES = [ 
+        "park", "grass", 
+        "agriculture", 
+        "pitch", "cemetery" 
+    ];
+
+    const GREENERY_CLASSES = [ 
+        "scrub", "hedge",
+        "wood", 
+        "national_park",  
+    ];
+
+    const props = item.properties;
+    let type = undefined;
+
+    if ( PARK_CLASSES.includes( props.class ) ) type = "parks";
+    if ( GREENERY_CLASSES.includes( props.class ) ) type = "greenery";
+    if ( [ "rock", "sand" ].includes( props.class ) ) type = "stone";
+    if ( [ "land" ].includes( props.class ) ) type = "pedestrian";
+    if ( EXCLUDE_CLASSES.includes( props.class ) ) return;
+
+    if ( ! type ) {
+        // console.log( props.class, "-", props.type );
+        // type = "unknown";
+        return;
+    }
+
+    const height = $.heights[ type ];
+    const geom = generateExtrudedGeometry( item.geometry, height );
+    const mesh = new THREE.Mesh( geom, $.materials[ type ] );
     $.city.add( mesh );
 
 }
@@ -254,50 +318,57 @@ function generateLeisure( item ) {
 
 function generateBuilding( item ) {
 
-    const levels = item.properties[ "building:levels" ] | $.config.defaults.levels;
-    const height = levels * $.heights.buildings;
+    //  skip combined footprints of multipart building 
+    //  [1] https://docs.mapbox.com/data/tilesets/reference/mapbox-streets-v8#building-extrude-text
+    if ( item.properties.extrude === "false" ) return;
 
     const type = "buildings";
-    const geom = generateExtrudedGeomtry( item.geometry, height );
+    const height = item.properties.height | $.config.defaults.levels;
+    const geom = generateExtrudedGeometry( item.geometry, height );
     if ( ! ( type in $.geometries ) ) $.geometries[ type ] = [];
     $.geometries[ type ].push( geom );
 
 }
 
 
-function generateHighway( item ) {
+function generateRoad( item ) {
     
+    const STREET_CLASSES = [ 
+        "motorway", "motorway_link", 
+        "trunk", "trunk_link", 
+        "primary", "primary_link", 
+        "secondary", "secondary_link", 
+        "tertiary", "tertiary_link", 
+        "street", "street_limited"
+    ];
+
+    const RAIL_CLASSES = [
+        "major_rail", 
+        "minor_rail", 
+        "service_rail"
+    ];
+
     const props = item.properties;
-    const subtype = props.highway;
-    const isWalkable = [ "path", "steps", "track", "footway", "cycleway" ].includes( subtype );
-    const isCurve = ( item.geometry.type === "LineString" );
-    
-    let type;
-    if ( ! isCurve ) type = "pedestrian";
-    else if ( isWalkable ) type = "path";
-    else type = "street";
+    let type = undefined;
+
+    if ( STREET_CLASSES.includes( props.class ) ) type = "street";
+    if ( RAIL_CLASSES.includes( props.class ) ) type = "railway";
+    if ( [ "pedestrian" ].includes( props.class ) ) type = "pedestrian";
+    if ( [ "track", "path" ].includes( props.class ) ) type = "path"; 
+    if ( ! type ) return;
+
+    if ( props.structure !== "none" ) {
+        return;
+    }
 
     let width;
-    if ( props.width ) width = props.width * $.config.widths.propWidth;
-    else if ( props.lanes ) width = props.lanes * $.config.widths.propLane;
+    if ( props.lane_count ) width = props.lane_count * $.config.widths.propLane;
     else width = $.config.widths.base;
 
     const height = $.heights[ type ];
-    const geom = generateExtrudedGeomtry( item.geometry, height, width );
+    const geom = generateExtrudedGeometry( item.geometry, height, width );
     if ( ! ( type in $.geometries ) ) $.geometries[ type ] = [];
     $.geometries[ type ].push( geom );
-
-}
-
-
-function generateRailway( item ) {
-        
-    const width = $.config.widths.railway;
-    const height = $.heights.railway;
-    
-    const geom = generateExtrudedGeomtry( item.geometry, height, width );
-    const mesh = new THREE.Mesh( geom, $.materials.railway );
-    $.city.add( mesh );
 
 }
 

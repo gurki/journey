@@ -21,33 +21,48 @@ export const STATE = {
     config: {
         // bounds:  { ymin: 47.47749, xmin: 19.0287947, ymax: 47.52146, xmax: 19.0854007 }, //  total
         bounds: { xmin: 19.0722, ymin: 47.5089, xmax: 19.0867, ymax: 47.5190 }, //  hom
-        scale: 7500,
+        scale: 10000,
         renderScale: 1000,
         tileSize: { width: 0.15, height: 0.15 },
         layerHeightMm: 0.2,   
         colors: {
-            parks: "#2c4",      //  parks, gardens
-            water: "#0ff",      //  lakes, rivers, oceans
-            stone: "#cc7",      //  stones, rocks, boulders
-            greenery: "#294",   //  trees, bushes, shrubbery
             buildings: "#ccc",  //  houses and more
-            street: "#777",     //  often has "lanes" 
+            greenery: "#294",   //  trees, bushes, shrubbery
+            ground: "#161616",  //  baseplate
+            parks: "#2c4",      //  parks, gardens
             path: "#aaa",       //  often has "width"
             pedestrian: "#555", //  highway, but polygon
             railway: "#666",    //  rails
-            ground: "#161616",  //  baseplate
+            stone: "#cc7",      //  stones, rocks, boulders
+            street: "#777",     //  often has "lanes" 
+            unknown: "#f00",
+            water: "#0ff",      //  lakes, rivers, oceans
         },
-        heights: {          //  [printLayers] if not stated otherwise
+        heights: {  //  [printLayers] if not stated otherwise
+            buildings: null,    //  unused
+            greenery: 2,
             ground: 3,
-            water: 1,
-            railway: 3,     
-            parks: 2,
-            stone: 3,
-            greenery: 3,
-            street: 3,
-            pedestrian: 4,
+            parks: 1,
             path: 5,
-            buildings: 5,   //  [m] per level
+            pedestrian: 4,
+            railway: 2,     
+            stone: 3,
+            street: 4,
+            unknown: 6,
+            water: 3,
+        },
+        heightOffsets: { 
+            buildings: 0,
+            greenery: 0,
+            ground: 0,
+            parks: 0,
+            path: 0,
+            pedestrian: 0,
+            railway: 0,     
+            stone: 0,
+            street: 0,
+            unknown: 0,
+            water: 0,
         },
         widths: {           //  [m]
             base: 4,        //  fallback, e.g. neither lanes nor width

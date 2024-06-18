@@ -1,9 +1,37 @@
 # Devlog
 
-## 24w24-4..25-1
+## 24w24..25-1
+
+### elevation
+- looking for elevation data
+- nasa has 15 arcsec resolution tiffs
+- tried some curls to get an idea of the data
+- google lets you only query for single points
+- stumbled upon vector tilesets, specifically mapbox
+- elevation data in both RGB encoded but also contour lines
+- contours could be really nice to print terrain in extruded layers
+
+### new map data
+- not satisfied with OSM map quality, looked for alternatives
+- learned about mapbox and vector tiles in general
+- great resources out there and widely supported standard
+- mapbox data quality is fantastic, e.g. building heights
+- mapbox-gl loads 3d models
+- can they be accessed somehow? browser requests go to [https://api.mapbox.com/v4/mapbox.mapbox-bathymetry-v2,mapbox.mapbox-streets-v8,mapbox.mapbox-terrain-v2,mapbox.mapbox-models-v1/14/8295/5634.vector.pbf?sku=101lREwqwf5Rh&access_token=pk.eyJ1IjoiZXhhbXBsZXMiLCJhIjoiY2p0MG01MXRqMW45cjQzb2R6b2ptc3J4MSJ9.zA2W0IkI0c6KaAhJfk9bWg](this endpoint)
+- the resulting `mvt` don't contain anything new
+- the additional `gbl` that are being fetched contain roof geometry
+- but no building facades, and i couldn't figure out where that's from
+- so leaving it at simple extrusion geometry for now
+- found `loaders.gl` for convenient MVT and GPX loaders
+- zoom level of mvts automatically solves print detail issue
+
+
+## 24w24-4
 _view and layer scaling_
 
-- 
+- implement separate scaling factors for rendering vs printing
+- add setting for layer height
+- migrate extrusion to use layer height setting
 
 
 ## 24w24-3 

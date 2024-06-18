@@ -17,7 +17,7 @@
 - https://touch-mapper.org/
 - https://github.com/vvoovv/blosm
 
-###  osm & overpass
+### osm & overpass
 - https://wiki.openstreetmap.org/wiki/Overpass_API
 - https://overpass-turbo.eu/
 - https://medium.com/@elfensky/how-i-build-a-3d-city-on-the-web-with-three-js-and-open-street-maps-607fc0d7bd39
@@ -49,6 +49,7 @@
 - https://github.com/mapbox/tippecanoe?tab=readme-ov-file#zoom-levels
 - https://data.maptiler.com/downloads/planet/
 - https://github.com/mapbox/tile-cover
+- https://docs.mapbox.com/data/tilesets/reference/mapbox-streets-v8
 
 ### gpx
 - https://github.com/mapbox/togeojson

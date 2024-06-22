@@ -3,6 +3,9 @@ import * as util from "../../arc/src/util.js";
 import { fetchGeojson } from "./fetch.js";
 import { fetchTilesForBounds } from "../../mvt/index.js"
 import { INTERSECTION, Brush, Evaluator, Operation, ADDITION, OperationGroup } from 'three-bvh-csg';
+import { extrudeGeoJSON } from "geometry-extrude";
+import PolyBool from "@velipso/polybool";
+import Stroke from "extrude-polyline";
 
 import * as THREE from "three"
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils";
@@ -50,6 +53,9 @@ async function build() {
     // let layerNames = new Set();
     // let types = {};
     // let classes = {};
+
+    // geometryStrip( [ [ 0, 0 ], [ 10, 0 ], [ 15, 10 ] ], 2 );
+    // return;
 
     features.forEach( ( feature, index ) => {
 
@@ -157,6 +163,88 @@ function shapeFromPolygon( polygon ) {
 }
 
 
+function geometryStrip( polyline, width ) {
+
+    // const points = polyline.map( coord => {
+    //     const arr = util.gpsArrToEnu( $.center, coord );
+    //     return [ arr[0], arr[1] ];
+    // });
+    const points = polyline;
+    console.log( points, width );
+
+    const stroke = new Stroke({ 
+        thickness: width,
+        cap: 'square',
+        join: 'bevel',
+        miterLimit: 10
+    });
+    const { positions, cells } = stroke.build( points );
+    let segs = undefined;
+
+    for ( const cell of cells ) {
+
+        const [ id1, id2, id3 ] = cell;
+        const poly = PolyBool.segments( { 
+            regions: [ positions[ id1 ], positions[ id2 ], positions[ id3 ] ],
+            inverted: false
+        });
+        
+        if ( ! segs ) {
+            segs = poly;
+            continue;
+        }
+        
+        const comb = PolyBool.combine( segs, poly );
+        segs = PolyBool.selectUnion( comb );
+
+    }
+
+    console.log( segs, PolyBool.polygon( segs ) );
+
+    return PolyBool.polygon( segs );
+
+}
+
+
+function geometryMultiStrip( multiLines, width ) {
+
+    let segs = undefined;
+
+    for ( const line of multiLines ) {
+
+        const poly = PolyBool.segments( geometryStrip( line, width ) );
+        
+        if ( ! segs ) {
+            segs = poly;
+            continue;
+        }
+
+        const comb = PolyBool.combine( segs, poly );
+        segs = PolyBool.selectUnion( comb );
+
+    }
+
+    return PolyBool.polygon( segs );
+
+}
+
+
+function extrudePolygon( polygon, height ) {
+
+    const options = {
+        steps: 1,
+        depth: height,
+        bevelEnabled: false
+    };
+    
+    const geom = new THREE.ExtrudeGeometry( polygon, options );
+    geom.rotateX( -Math.PI / 2 );
+    geom.computeVertexNormals();
+    return geom;
+    
+}
+
+
 function geometryFromLineString( polygon, width = 5, height = 2 ) {
 
     const points = polygon.map( coord => {
@@ -166,13 +254,13 @@ function geometryFromLineString( polygon, width = 5, height = 2 ) {
 
     const curve = new THREE.CatmullRomCurve3( points );
     const shape = new THREE.Shape();
-    shape.moveTo( 0, - width / 2 );
-    shape.lineTo( height, - width / 2 );
-    shape.lineTo( height, width / 2 );
-    shape.lineTo( 0, width / 2 );
-    shape.lineTo( 0, - width / 2 );
+    shape.moveTo( - width / 2, 0 );
+    shape.lineTo( - width / 2, height );
+    shape.lineTo( width / 2, height );
+    shape.lineTo( width / 2, 0 );
+    shape.lineTo( - width / 2, 0 );
 
-    const steps = polygon.length * 2;
+    const steps = Math.max( polygon.length * 2, 20 );
     
     let geom = new THREE.ExtrudeGeometry( shape, {     
         steps,
@@ -181,7 +269,7 @@ function geometryFromLineString( polygon, width = 5, height = 2 ) {
     });
 
     geom.rotateX( -Math.PI / 2 );
-    geom.translate( 0, height, 0 );
+    geom.translate( 0, height / 2, 0 );
     geom.computeVertexNormals();
     return geom;
     
@@ -254,6 +342,8 @@ function generateExtrudedGeometry( geometry, height, width ) {
         case "MultiPolygon": return geometryFromMultiPolygons( geometry.coordinates, height );
         case "LineString": return geometryFromLineString( geometry.coordinates, width, height );
         case "MultiLineString": return geometryFromMultiLineString( geometry.coordinates, width, height );
+        // case "LineString": return geometryStrip( geometry.coordinates, width );
+        // case "MultiLineString": return geometryMultiStrip( geometry.coordinates, width );
     }
      
     console.error( `unknown geometry type ${geometry.type}` );
@@ -353,20 +443,41 @@ function generateRoad( item ) {
 
     if ( STREET_CLASSES.includes( props.class ) ) type = "street";
     if ( RAIL_CLASSES.includes( props.class ) ) type = "railway";
-    if ( [ "pedestrian" ].includes( props.class ) ) type = "pedestrian";
+    if ( [ "pedestrian" ].includes( props.class ) ) type = "path";
     if ( [ "track", "path" ].includes( props.class ) ) type = "path"; 
     if ( ! type ) return;
+    // if ( [ "pedestrian", "street" ].includes( type ) ) return;
 
     if ( props.structure !== "none" ) {
         return;
     }
 
+    const ROAD_WIDTHS = {
+        "motorway": 24,
+        "trunk": 22,
+        "primary": 20,
+        "secondary": 16,
+        "tertiary": 12,
+        "residential": 8,
+        "service": 6,
+        "unclassified": 8,
+        "living_street": 6,
+        "pedestrian": 4,
+        "track": 4,
+        "road": 8
+    };      
+
     let width;
     if ( props.lane_count ) width = props.lane_count * $.config.widths.propLane;
+    // else if ( type === "street" ) width = ROAD_WIDTHS[ props.type ];
     else width = $.config.widths.base;
 
     const height = $.heights[ type ];
+    
+    // if ( ! ( "walking" in $.operations ) ) $.operations[ "walking" ] = [];
     const geom = generateExtrudedGeometry( item.geometry, height, width );
+    // console.log( polygon );
+    // const geom = extrudePolygon( polygon, height );
     if ( ! ( type in $.geometries ) ) $.geometries[ type ] = [];
     $.geometries[ type ].push( geom );
 

@@ -68,6 +68,7 @@ function computeDerived() {
         $.heights[ type ] = $.config.scale * $.config.heights[ type ] * $.config.layerHeightMm / 1000;
     }
 
+    console.log( $.config.heights );
     console.log( $.heights );
 }
 

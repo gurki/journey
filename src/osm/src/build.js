@@ -5,6 +5,7 @@ import { fetchTilesForBounds } from "../../mvt/index.js"
 import { INTERSECTION, Brush, Evaluator, Operation, ADDITION, OperationGroup } from 'three-bvh-csg';
 import { extrudeGeoJSON } from "geometry-extrude";
 import Stroke from "extrude-polyline";
+import { expandPaths } from "poly-extrude";
 
 import * as THREE from "three"
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils";
@@ -27,7 +28,7 @@ async function fetchData() {
     // const data = await fetchTilesForBounds( $.worldOuterBounds, 15, URL_TEMPLATE, ACCESS_TOKEN );
     // $.data = data;
 
-    const response = await fetch( "./results/hom-mvt-15.geojson" );
+    const response = await fetch( "./results/all-mvt-15.geojson" );
     const tiles = await response.json();
     $.data = tiles.flat();
 
@@ -58,9 +59,9 @@ async function build() {
 
     features.forEach( ( feature, index ) => {
 
-        // if ( index % 100 === 0 ) {
-        //     console.log( "   ", ( 100 * index / ( features.length - 1 ) ).toFixed( 1 ), "%" );
-        // }
+        if ( index % 100 === 0 ) {
+            console.log( "   ", ( 100 * index / ( features.length - 1 ) ).toFixed( 1 ), "%" );
+        }
 
         if ( feature.geometry.type === "Point" ) {
             return;
@@ -71,26 +72,35 @@ async function build() {
 
         switch ( name ) {
             // case "building": generateBuilding( feature ); break;
-            case "water": appendGeometry( feature, "water" ); break;
+            case "water": appendWorldGeometry( feature, "water" ); break;
             // case "road": generateRoad( feature ); break;
-            // case "landuse":
-            // case "structure":   //  hedge
-            // case "landuse_overlay": geenerateLanduse( feature ); break;
+            case "landuse":
+            case "structure":   //  hedge
+            case "landuse_overlay": generateLanduse( feature ); break;
         }
 
     });
 
-    const mat = $.materials.water;
+    for ( const type in $.polygons ) {
 
-    for ( const polygon of $.polygons.water ) {
-
-        const shape = buildPolygonShape( polygon );
-        const geom = extrudeShape( shape, 10 );
-        geom.rotateX( -Math.PI / 2 );
-        geom.computeVertexNormals();
+        const multipolygon = $.polygons[ type ];
         
-        const mesh = new THREE.Mesh( geom, mat );
-        $.scene.add( mesh );
+        if ( ! multipolygon || multipolygon.length === 0 ) {
+            continue;
+        }
+
+        for ( const polygon of multipolygon ) {
+
+            const shape = buildPolygonShape( polygon );
+            const geom = extrudeShape( shape, $.heights[ type ] );
+            const mat = $.materials[ type ];
+            geom.rotateX( -Math.PI / 2 );
+            geom.computeVertexNormals();
+            
+            const mesh = new THREE.Mesh( geom, mat );
+            $.scene.add( mesh );
+
+        }
 
     }
 
@@ -145,69 +155,44 @@ async function build() {
 }
 
 
-function geometryStrip( polyline, width ) {
+function extrudeLine( line, width ) {
 
-    // const points = polyline.map( coord => {
-    //     const arr = util.gpsArrToEnu( $.center, coord );
-    //     return [ arr[0], arr[1] ];
+    const { position } = expandPaths( [ line ], { cornerRadius: 0.5, lineWidth: width } );
+    return [ position ];
+
+    // const stroke = new Stroke({ 
+    //     thickness: width,
+    //     cap: 'square',
+    //     join: 'bevel',
+    //     miterLimit: 10
     // });
-    const points = polyline;
-    console.log( points, width );
+    
+    // const { positions, cells } = stroke.build( line );
 
-    const stroke = new Stroke({ 
-        thickness: width,
-        cap: 'square',
-        join: 'bevel',
-        miterLimit: 10
-    });
-    const { positions, cells } = stroke.build( points );
-    let segs = undefined;
+    // let multipolygon = undefined;
 
-    for ( const cell of cells ) {
-
-        const [ id1, id2, id3 ] = cell;
-        const poly = polybool.multipolygon( { 
-            regions: [ positions[ id1 ], positions[ id2 ], positions[ id3 ] ],
-            inverted: false
-        });
+    // for ( const cell of cells ) {
         
-        if ( ! segs ) {
-            segs = poly;
-            continue;
-        }
+    //     const [ id1, id2, id3 ] = cell;
+    //     const region = [ positions[ id1 ], positions[ id2 ], positions[ id3 ] ];
+    //     const polygon = [ region ];
         
-        const comb = polybool.combine( segs, poly );
-        segs = polybool.selectUnion( comb );
+    //     if ( ! multipolygon ) {
+    //         multipolygon = polygon;
+    //         continue;
+    //     }
 
-    }
+    //     multipolygon = martinez.union( polygon, multipolygon );
 
-    console.log( segs, polybool.polygon( segs ) );
+    // }
 
-    return polybool.polygon( segs );
+    // return multipolygon;
 
 }
 
 
-function geometryMultiStrip( multiLines, width ) {
-
-    let segs = undefined;
-
-    for ( const line of multiLines ) {
-
-        const poly = polybool.multipolygon( geometryStrip( line, width ) );
-        
-        if ( ! segs ) {
-            segs = poly;
-            continue;
-        }
-
-        const comb = polybool.combine( segs, poly );
-        segs = polybool.selectUnion( comb );
-
-    }
-
-    return polybool.polygon( segs );
-
+function extrudeMultiLine( multilines, width ) {
+    return multilines.flatMap( line => extrudeLine( line, width ) );
 }
 
 
@@ -289,6 +274,30 @@ function extrudeShape( shape, height ) {
 
 
 /**
+ * Convert each GPS point to local coordinates
+ * @param {*} line list of points (Point[])
+ * @param {*} origin 
+ * @returns LineString
+ */
+function toLocalLine( line, origin ) {
+    return line.map( coord => 
+        util.gpsArrToEnu( origin, coord ).slice( 0, 2 )
+    );
+}
+
+
+/**
+ * Convert each GPS line to local coordinates
+ * @param {*} multiline list of lines (Point[][])
+ * @param {*} origin 
+ * @returns MultiLineString
+ */
+function toLocalMultiLine( multiline, origin ) {
+    return multiline.map( line => toLocalLine( line, origin ) );
+}
+
+
+/**
  * Convert each GPS region to local coordinates
  * @param {*} polygon list of Regions (Point[][])
  * @param {*} origin 
@@ -336,9 +345,13 @@ function toLocalGeometry( geometry, origin ) {
  * @param {*} origin
  * @returns MultiPolygon
  */
-function geometryUnion( geometry, subject, origin ) 
+function worldGeometryUnion( geometry, subject, origin ) 
 {   
     const local = toLocalGeometry( geometry, origin );
+
+    if ( ! local || local.length === 0 ) {
+        return;
+    }
     
     if ( ! subject || subject.length === 0 ) {
         return local;
@@ -348,8 +361,30 @@ function geometryUnion( geometry, subject, origin )
 }
 
 
-function appendGeometry( item, type ) {
-    $.polygons[ type ] = geometryUnion( item.geometry, $.polygons[ type ], $.center );
+/**
+ * Compute union of local geometry with local subject
+ * @param {*} geometry Polygon or MultiPolygon
+ * @param {*} subject Polygon or MultiPolygon
+ * @param {*} origin
+ * @returns MultiPolygon
+ */
+function geometryUnion( geometry, subject ) 
+{   
+    if ( ! subject || subject.length === 0 ) {
+        return geometry;
+    }
+
+    return martinez.union( subject, geometry );
+}
+
+
+function appendWorldGeometry( item, type ) {
+    $.polygons[ type ] = worldGeometryUnion( item.geometry, $.polygons[ type ], $.center );
+}
+
+
+function appendGeometry( geometry, type ) {
+    $.polygons[ type ] = geometryUnion( geometry, $.polygons[ type ] );
 }
 
 
@@ -389,10 +424,7 @@ function generateLanduse( item ) {
         return;
     }
 
-    const height = $.heights[ type ];
-    const geom = generateExtrudedGeometry( item.geometry, height );
-    const mesh = new THREE.Mesh( geom, $.materials[ type ] );
-    $.city.add( mesh );
+    appendWorldGeometry( item, type );
 
 }
 
@@ -458,10 +490,29 @@ function generateRoad( item ) {
         "road": 8
     };      
 
-    let width;
+    let width = $.config.widths.base;
     if ( props.lane_count ) width = props.lane_count * $.config.widths.propLane;
     else if ( props.type in ROAD_WIDTHS ) width = ROAD_WIDTHS[ props.type ];
-    else width = $.config.widths.base;
+
+    let multipolygon;
+    
+    if ( item.geometry.type === "LineString" ) {
+        const line = toLocalLine( item.geometry.coordinates, $.center );
+        multipolygon = extrudeLine( line, width );
+    // } else if ( item.geometry.type === "MultiLineString" ) {
+        // const multiline = toLocalMultiLine( item.geometry.coordinates, $.center );
+        // multipolygon = extrudeMultiLine( multiline, width );
+    } else {
+        console.error( "invalid road type", item.geometry.type );
+    }
+
+    if ( ! multipolygon ) return;
+
+    console.log( multipolygon );
+
+    // if ( ! $.polygons.road ) $.polygons.road = multipolygon;
+    // else $.polygons.road.push( ...multipolygon );
+    appendGeometry( multipolygon, "road" );
     
 }
 

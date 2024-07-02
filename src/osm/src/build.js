@@ -35,7 +35,37 @@ async function fetchData() {
 
 
 
-let segments = polybool.segments( { regions: [], inverted: false } );
+let multipolygon = [];
+
+
+function buildShape( coords ) {
+
+    let shape = new THREE.Shape();
+    shape.moveTo( coords[ 0 ][ 0 ], coords[ 0 ][ 1 ] );
+    
+    for ( const point of coords.slice( 1 ) ) {
+        shape.lineTo( point[ 0 ], point[ 1 ] );
+    }
+    
+    shape.closePath();
+    return shape;
+    
+}
+
+
+function buildPath( coords ) {
+
+    let path = new THREE.Path();
+    path.moveTo( coords[ 0 ][ 0 ], coords[ 0 ][ 1 ] );
+
+    for ( const point of coords.slice( 1 ) ) {
+        path.lineTo( point[ 0 ], point[ 1 ] );
+    }
+    
+    path.closePath();
+    return path;
+    
+}
 
 
 async function build() {
@@ -91,18 +121,21 @@ async function build() {
 
     });
 
-    const poly = polybool.polygon( segments );
-    console.log( poly );
+    // const poly = polybool.polygon( multipolygon );
+    console.log( multipolygon );
 
-    const mat = new THREE.LineBasicMaterial( { color: 0xff0000 } );
+    // const mat = new THREE.LineBasicMaterial( { color: 0xff0000 } );
+    const mat = $.materials.water;
 
-    for ( const region of poly.regions.slice( 0, 3 ) ) {
-        let shape = new THREE.Shape();
-        shape.moveTo( region[ 0 ][ 0 ], region[ 0 ][ 1 ] );
-        for ( const point of region ) {
-            shape.lineTo( point[ 0 ], point[ 1 ] );
+    for ( const polygon of multipolygon ) {
+
+        const shape = buildShape( polygon[ 0 ] );
+
+        for ( const region of polygon.slice( 1 ) ) {
+            const path = buildPath( region );
+            shape.holes.push( path );            
         }
-        shape.closePath();
+        
         const geom = new THREE.ShapeGeometry( shape );
         geom.rotateX( -Math.PI / 2 );
         geom.translate( 0, 5, 0 );
@@ -111,7 +144,8 @@ async function build() {
         const mesh = new THREE.Mesh( geom, mat );
         $.scene.add( mesh );
 
-        $.scene.add( new THREE.Line( geom ) );
+        // $.scene.add( new THREE.Line( geom ) );
+
     }
 
 
@@ -213,7 +247,7 @@ function geometryStrip( polyline, width ) {
     for ( const cell of cells ) {
 
         const [ id1, id2, id3 ] = cell;
-        const poly = polybool.segments( { 
+        const poly = polybool.multipolygon( { 
             regions: [ positions[ id1 ], positions[ id2 ], positions[ id3 ] ],
             inverted: false
         });
@@ -241,7 +275,7 @@ function geometryMultiStrip( multiLines, width ) {
 
     for ( const line of multiLines ) {
 
-        const poly = polybool.segments( geometryStrip( line, width ) );
+        const poly = polybool.multipolygon( geometryStrip( line, width ) );
         
         if ( ! segs ) {
             segs = poly;
@@ -380,33 +414,50 @@ function generateExtrudedGeometry( geometry, height, width ) {
 }
 
 
-function segmentsFromPolygon( regions ) 
-{   
-    const regionsLocal = regions.map( region => {
-        return region.map( coord => util.gpsArrToEnu( $.center, coord ).slice( 0, 2 ) );
-    });
+function toLocalPolygon( polygon, origin ) {
+    return polygon.map( region => 
+        region.map( coord => 
+            util.gpsArrToEnu( origin, coord ).slice( 0, 2 )
+        )
+    );
+}
 
-    return polybool.segments({
-        regions: regionsLocal,
-        inverted: false
-    });
+function toLocalMultiPolygon( multipolygon, origin ) {
+    return multipolygon.map( polygon => toLocalPolygon( polygon, origin ) );
+}
+
+
+function toLocalGeometry( geometry, origin ) {
+    switch ( geometry.type ) {
+        case "Polygon": return toLocalPolygon( geometry.coordinates, origin );
+        case "MultiPolygon": return toLocalMultiPolygon( geometry.coordinates, origin );
+        default: console.error( "not implemented yet" );
+    }
+}
+
+
+function processGeometry( geometry ) 
+{   
+    const local = toLocalGeometry( geometry, $.center );
+    
+    if ( multipolygon.length === 0 ) {
+        multipolygon = local;
+        return;
+    }
+
+    multipolygon = martinez.union( multipolygon, local );
 }
 
 
 function generateWater( item ) {
 
-    const type = "water";
-    const height = $.heights[ type ];
-    console.log( item.geometry.type );
+    // const type = "water";
+    // const height = $.heights[ type ];
+    // const geom = generateExtrudedGeometry( item.geometry, height );
+    // const mesh = new THREE.Mesh( geom, $.materials[ type ] );
+    // $.city.add( mesh );
 
-    if ( item.geometry.type === "Polygon" ) {
-        const segs = segmentsFromPolygon( item.geometry.coordinates );
-        const comb = polybool.combine( segments, segs );
-        segments = polybool.selectUnion( comb );
-    }
-    const geom = generateExtrudedGeometry( item.geometry, height );
-    const mesh = new THREE.Mesh( geom, $.materials[ type ] );
-    $.city.add( mesh );
+    processGeometry( item.geometry );
 
 }
 

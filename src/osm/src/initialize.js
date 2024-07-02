@@ -66,6 +66,7 @@ function computeDerived() {
     
     for ( const type of Object.keys( $.config.heights ) ) {
         $.heights[ type ] = $.config.scale * $.config.heights[ type ] * $.config.layerHeightMm / 1000;
+        $.polygons[ type ] = [];
     }
 
     console.log( $.config.heights );

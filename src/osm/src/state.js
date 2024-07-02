@@ -16,6 +16,7 @@ export const STATE = {
     data: null,
     operations: {},
     geometries: {},
+    polygons: {},
     city: new THREE.Group(),
     
     config: {

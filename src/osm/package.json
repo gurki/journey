@@ -15,10 +15,12 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "@loaders.gl/kml": "^4.2.2",
     "@tweakpane/plugin-essentials": "^0.2.1",
     "@velipso/polybool": "^1.0.0",
     "extrude-polyline": "^1.0.6",
     "geometry-extrude": "^0.2.1",
+    "martinez-polygon-clipping": "^0.7.3",
     "osmtogeojson": "^3.0.0-beta.5",
     "polybooljs": "^1.2.2",
     "three": "^0.165.0",

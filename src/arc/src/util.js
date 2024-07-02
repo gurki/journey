@@ -34,6 +34,7 @@ export function gpsArrToEnu( refPoint, targetPoint ) {
 
     const lon = targetPoint[0];
     const lat = targetPoint[1];
+    const alt = targetPoint[2];
 
     let east = geolib.getDistance(
         { latitude: refPoint.latitude, longitude: refPoint.longitude },
@@ -53,7 +54,8 @@ export function gpsArrToEnu( refPoint, targetPoint ) {
         north = -north;
     }
 
-    return [ east, north ];
+    const altitude = ( alt - refPoint.altitude ) | alt | 0;
+    return [ east, north, altitude ];
     
 }
 

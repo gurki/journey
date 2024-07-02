@@ -4,11 +4,12 @@ import { fetchGeojson } from "./fetch.js";
 import { fetchTilesForBounds } from "../../mvt/index.js"
 import { INTERSECTION, Brush, Evaluator, Operation, ADDITION, OperationGroup } from 'three-bvh-csg';
 import { extrudeGeoJSON } from "geometry-extrude";
-import PolyBool from "@velipso/polybool";
 import Stroke from "extrude-polyline";
 
 import * as THREE from "three"
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils";
+import polybool from "@velipso/polybool";
+import * as martinez from "martinez-polygon-clipping";
 
 
 // async function fetchData() {
@@ -31,6 +32,10 @@ async function fetchData() {
     $.data = tiles.flat();
 
 }
+
+
+
+let segments = polybool.segments( { regions: [], inverted: false } );
 
 
 async function build() {
@@ -59,9 +64,9 @@ async function build() {
 
     features.forEach( ( feature, index ) => {
 
-        if ( index % 100 === 0 ) {
-            console.log( "   ", ( 100 * index / ( features.length - 1 ) ).toFixed( 1 ), "%" );
-        }
+        // if ( index % 100 === 0 ) {
+        //     console.log( "   ", ( 100 * index / ( features.length - 1 ) ).toFixed( 1 ), "%" );
+        // }
 
         if ( feature.geometry.type === "Point" ) {
             return;
@@ -76,15 +81,39 @@ async function build() {
         // classes[ name ].add( props.class );
 
         switch ( name ) {
-            case "building": generateBuilding( feature ); break;
+            // case "building": generateBuilding( feature ); break;
             case "water": generateWater( feature ); break;
-            case "road": generateRoad( feature ); break;
-            case "landuse":
-            case "structure":   //  hedge
-            case "landuse_overlay": geenerateLanduse( feature ); break;
+            // case "road": generateRoad( feature ); break;
+            // case "landuse":
+            // case "structure":   //  hedge
+            // case "landuse_overlay": geenerateLanduse( feature ); break;
         }
 
     });
+
+    const poly = polybool.polygon( segments );
+    console.log( poly );
+
+    const mat = new THREE.LineBasicMaterial( { color: 0xff0000 } );
+
+    for ( const region of poly.regions.slice( 0, 3 ) ) {
+        let shape = new THREE.Shape();
+        shape.moveTo( region[ 0 ][ 0 ], region[ 0 ][ 1 ] );
+        for ( const point of region ) {
+            shape.lineTo( point[ 0 ], point[ 1 ] );
+        }
+        shape.closePath();
+        const geom = new THREE.ShapeGeometry( shape );
+        geom.rotateX( -Math.PI / 2 );
+        geom.translate( 0, 5, 0 );
+        geom.computeVertexNormals();
+        
+        const mesh = new THREE.Mesh( geom, mat );
+        $.scene.add( mesh );
+
+        $.scene.add( new THREE.Line( geom ) );
+    }
+
 
     // console.log( layerNames );
     // console.log( types );
@@ -184,7 +213,7 @@ function geometryStrip( polyline, width ) {
     for ( const cell of cells ) {
 
         const [ id1, id2, id3 ] = cell;
-        const poly = PolyBool.segments( { 
+        const poly = polybool.segments( { 
             regions: [ positions[ id1 ], positions[ id2 ], positions[ id3 ] ],
             inverted: false
         });
@@ -194,14 +223,14 @@ function geometryStrip( polyline, width ) {
             continue;
         }
         
-        const comb = PolyBool.combine( segs, poly );
-        segs = PolyBool.selectUnion( comb );
+        const comb = polybool.combine( segs, poly );
+        segs = polybool.selectUnion( comb );
 
     }
 
-    console.log( segs, PolyBool.polygon( segs ) );
+    console.log( segs, polybool.polygon( segs ) );
 
-    return PolyBool.polygon( segs );
+    return polybool.polygon( segs );
 
 }
 
@@ -212,19 +241,19 @@ function geometryMultiStrip( multiLines, width ) {
 
     for ( const line of multiLines ) {
 
-        const poly = PolyBool.segments( geometryStrip( line, width ) );
+        const poly = polybool.segments( geometryStrip( line, width ) );
         
         if ( ! segs ) {
             segs = poly;
             continue;
         }
 
-        const comb = PolyBool.combine( segs, poly );
-        segs = PolyBool.selectUnion( comb );
+        const comb = polybool.combine( segs, poly );
+        segs = polybool.selectUnion( comb );
 
     }
 
-    return PolyBool.polygon( segs );
+    return polybool.polygon( segs );
 
 }
 
@@ -289,7 +318,7 @@ function compositeFromPolygons( polygons ) {
 		}
 
 	});
-
+polybool
     return comp;
 
 }
@@ -351,10 +380,30 @@ function generateExtrudedGeometry( geometry, height, width ) {
 }
 
 
+function segmentsFromPolygon( regions ) 
+{   
+    const regionsLocal = regions.map( region => {
+        return region.map( coord => util.gpsArrToEnu( $.center, coord ).slice( 0, 2 ) );
+    });
+
+    return polybool.segments({
+        regions: regionsLocal,
+        inverted: false
+    });
+}
+
+
 function generateWater( item ) {
 
     const type = "water";
     const height = $.heights[ type ];
+    console.log( item.geometry.type );
+
+    if ( item.geometry.type === "Polygon" ) {
+        const segs = segmentsFromPolygon( item.geometry.coordinates );
+        const comb = polybool.combine( segments, segs );
+        segments = polybool.selectUnion( comb );
+    }
     const geom = generateExtrudedGeometry( item.geometry, height );
     const mesh = new THREE.Mesh( geom, $.materials[ type ] );
     $.city.add( mesh );

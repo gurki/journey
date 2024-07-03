@@ -46,7 +46,7 @@ export const STATE = {
             greenery: 2,
             railway: 2,     
             stone: 3,
-            water: 3,
+            water: 2,
             street: 2,
             pedestrian: 3,
             path: 3,

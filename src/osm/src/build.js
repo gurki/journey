@@ -59,7 +59,7 @@ async function build() {
 
     features.forEach( ( feature, index ) => {
 
-        if ( index % 100 === 0 ) {
+        if ( index % 1000 === 0 ) {
             console.log( "   ", ( 100 * index / ( features.length - 1 ) ).toFixed( 1 ), "%" );
         }
 
@@ -93,11 +93,13 @@ async function build() {
 
             const shape = buildPolygonShape( polygon );
             const geom = extrudeShape( shape, $.heights[ type ] );
+            // const geom = new THREE.ShapeGeometry( shape );
             const mat = $.materials[ type ];
             geom.rotateX( -Math.PI / 2 );
             geom.computeVertexNormals();
             
             const mesh = new THREE.Mesh( geom, mat );
+            // const mesh = new THREE.Line( geom );
             $.scene.add( mesh );
 
         }
@@ -331,9 +333,9 @@ function toLocalMultiPolygon( multipolygon, origin ) {
  */
 function toLocalGeometry( geometry, origin ) {
     switch ( geometry.type ) {
-        case "Polygon": return toLocalPolygon( geometry.coordinates, origin );
+        case "Polygon": return [ toLocalPolygon( geometry.coordinates, origin ) ];
         case "MultiPolygon": return toLocalMultiPolygon( geometry.coordinates, origin );
-        default: console.error( "not implemented yet" );
+        default: console.error( "not implemented yet", geometry.type );
     }
 }
 
@@ -350,14 +352,18 @@ function worldGeometryUnion( geometry, subject, origin )
     const local = toLocalGeometry( geometry, origin );
 
     if ( ! local || local.length === 0 ) {
-        return;
+        return subject;
     }
-    
+
     if ( ! subject || subject.length === 0 ) {
         return local;
     }
+    
+    return [ ...local, ...subject ];
 
-    return martinez.union( subject, local );
+    // const union = martinez.union( local, subject );
+    // console.log( local, subject, union );
+    // return union;
 }
 
 
@@ -508,7 +514,7 @@ function generateRoad( item ) {
 
     if ( ! multipolygon ) return;
 
-    console.log( multipolygon );
+    // console.log( multipolygon );
 
     // if ( ! $.polygons.road ) $.polygons.road = multipolygon;
     // else $.polygons.road.push( ...multipolygon );

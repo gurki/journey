@@ -10,11 +10,11 @@ initialize();
 await build();
 
 
-$.city.traverse( child => {
-    if ( ! child.isMesh ) return;
-    child.material.transparent = true;
-    child.material.opacity = 0.5;
-});
+// $.city.traverse( child => {
+//     if ( ! child.isMesh ) return;
+//     child.material.transparent = true;
+//     child.material.opacity = 0.5;
+// });
 
 
 // const data = await load( "2024-05-28.gpx", GPXLoader );

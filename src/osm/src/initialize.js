@@ -69,8 +69,6 @@ function computeDerived() {
         $.polygons[ type ] = [];
     }
 
-    console.log( $.config.heights );
-    console.log( $.heights );
 }
 
 

@@ -5,7 +5,7 @@ import { fetchTilesForBounds } from "../../mvt/index.js"
 import { INTERSECTION, Brush, Evaluator, Operation, ADDITION, OperationGroup } from 'three-bvh-csg';
 import { extrudeGeoJSON } from "geometry-extrude";
 import Stroke from "extrude-polyline";
-import { expandPaths } from "poly-extrude";
+import { expandPaths, extrudePolylines } from "poly-extrude";
 
 import * as THREE from "three"
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils";
@@ -25,10 +25,10 @@ async function fetchData() {
     // const ACCESS_TOKEN = 'pk.eyJ1IjoidGd1cmRhbiIsImEiOiJjbHhqODE5MnIxaHpxMmlzM2VjbWthMGdxIn0.1Pix25iPyLlNetjOtghK1w';
     // const URL_TEMPLATE = 'https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/{z}/{x}/{y}.vector.pbf';
     // const zoom = 15;
-    // const data = await fetchTilesForBounds( $.worldOuterBounds, 15, URL_TEMPLATE, ACCESS_TOKEN );
-    // $.data = data;
+    // const data = await fetchTilesForBounds( $.worldOuterBounds, zoom, URL_TEMPLATE, ACCESS_TOKEN );
+    // $.data = data.flat();
 
-    const response = await fetch( "./results/all-mvt-15.geojson" );
+    const response = await fetch( "./results/hom-mvt-15.geojson" );
     const tiles = await response.json();
     $.data = tiles.flat();
 
@@ -44,6 +44,7 @@ function addGround() {
     $.city.add( ground );
 
 }
+
 
 async function build() {
 
@@ -71,12 +72,12 @@ async function build() {
         const name = props.layerName;
 
         switch ( name ) {
-            // case "building": generateBuilding( feature ); break;
-            // case "water": appendWorldGeometry( feature, "water" ); break;
+            case "building": generateBuilding( feature ); break;
+            case "water": appendWorldGeometry( feature, "water" ); break;
             case "road": generateRoad( feature ); break;
-            // case "landuse":
-            // case "structure":   //  hedge
-            // case "landuse_overlay": generateLanduse( feature ); break;
+            case "landuse":
+            case "structure":   //  hedge
+            case "landuse_overlay": generateLanduse( feature ); break;
         }
 
     });
@@ -87,40 +88,47 @@ async function build() {
         const geom = extrudeMultipolygon( multipolygon, $.heights[ type ] );
         const mat = $.materials[ type ];
         const mesh = new THREE.Mesh( geom, mat );
-        // const mesh = new THREE.Line( geom );
         $.city.add( mesh );
 
     }
 
-    const buildingGeom = mergeGeometries( $.geometries.buildings );
-    const buildingMesh = new THREE.Mesh( buildingGeom, $.materials.buildings );
-    $.city.add( buildingMesh );
+    for ( const key in $.geometries ) {
+        const geom = mergeGeometries( $.geometries[ key ] );
+        const mesh = new THREE.Mesh( geom, $.materials[ key ] );
+        $.city.add( mesh );
+    }
     
     //  merge objects
 
     const evaluator = new Evaluator();
-
-    // for ( const type of Object.keys( $.geometries ) ) {
-    //     const geom = mergeGeometries( $.geometries[ type ] );
-    //     const mat = $.materials[ type ];    
-    //     $.city.add( new THREE.Mesh( geom, mat ) );
-    // }
-
-    // // evaluator.consolidateMaterials = true;
-    // // evaluator.useGroups = true;
+    evaluator.consolidateMaterials = true;
+    evaluator.useGroups = true;
     
     // const pedestrian = new Brush( mergeGeometries( $.geometries.pedestrian ), $.materials.pedestrian );
     // const path = new Brush( mergeGeometries( $.geometries.path ), $.materials.path );
     // const street = new Brush( mergeGeometries( $.geometries.street ), $.materials.street );
+    // const railway = new Brush( mergeGeometries( $.geometries.railway ), $.materials.railway );
     // const buildings = new Brush( mergeGeometries( $.geometries.buildings ), $.materials.buildings );
 
-    // // $.city.add( new THREE.Mesh( pedestrian, $.materials.pedestrian ) );
-    // // $.city.add( new THREE.Mesh( path, $.materials.path ) );
-    // // $.city.add( new THREE.Mesh( street, $.materials.street ) );
+    // $.city.add( new THREE.Mesh( pedestrian, $.materials.pedestrian ) );
+    // $.city.add( path );
+    // $.city.add( street );
+    // $.city.add( railway );
     
-    // // let pedestrian = new Brush( mergeGeometries( $.geometries.pedestrian ), $.materials.pedestrian );
-    // // group = evaluator.evaluate( group, new Brush( path, $.materials.path ), ADDITION );
-    // // group = evaluator.evaluate( group, new Brush( street, $.materials.street ), ADDITION );
+    // let pedestrian = new Brush( mergeGeometries( $.geometries.pedestrian ), $.materials.pedestrian );
+
+    // let res = new Brush( new THREE.SphereGeometry( 0 ) );
+
+    // let count = 0;
+    // for ( const geom of $.geometries.path ) {
+    //     console.log( res, new Brush( geom ) );
+    //     res = evaluator.evaluate( new Brush( geom ), res, ADDITION );
+    //     count++;
+    //     if ( count > 20 ) { break }
+    // }
+
+    // $.city.add( res );
+    // group = evaluator.evaluate( group, new Brush( street, $.materials.street ), ADDITION );
     
     // let res;
     // res = evaluator.evaluate( pedestrian, path, ADDITION );
@@ -138,6 +146,10 @@ async function build() {
 
     for ( const child of $.city.children ) {
         const childBrush = new Brush( child.geometry );
+        child.geometry.computeBoundingBox();
+        if ( child.geometry.boundingBox.isEmpty() ) {
+            continue;
+        }
         const result = evaluator.evaluate( childBrush, cubeBrush, INTERSECTION );    
         child.geometry = result.geometry;
     }
@@ -147,47 +159,62 @@ async function build() {
 }
 
 
-function extrudeLine( line, width ) {
+function extrudeLine( line, width, height ) {
 
-    // console.log( line, width );
+    return extrudeMultiLine( [ line ], width, height );
 
-    // const { position } = expandPaths( [ line ], { cornerRadius: 0.5, lineWidth: width } );
-    // return [ position ];
-
-    const stroke = new Stroke({ 
-        thickness: width,
-        cap: 'square',
-        join: 'bevel',
-        miterLimit: 10
-    });
+    // const stroke = new Stroke({ 
+    //     thickness: width,
+    //     cap: 'square',
+    //     join: 'bevel',
+    //     miterLimit: 10
+    // });
     
-    const { positions, cells } = stroke.build( line );
+    // const { positions, cells } = stroke.build( line );
 
-    let multipolygon = [];
+    // let multipolygon = [];
 
-    for ( const cell of cells ) {
+    // for ( const cell of cells ) {
         
-        const [ id1, id2, id3 ] = cell;
-        const region = [ positions[ id1 ], positions[ id2 ], positions[ id3 ] ];
-        // const polygon = [ region ];
+    //     const [ id1, id2, id3 ] = cell;
+    //     const region = [ positions[ id1 ], positions[ id2 ], positions[ id3 ] ];
+    //     // const polygon = [ region ];
         
-        multipolygon.push( [ region ] );
-        // if ( ! multipolygon ) {
-            // multipolygon = polygon;
-            // continue;
-        // }
+    //     multipolygon.push( [ region ] );
+    //     // if ( ! multipolygon ) {
+    //         // multipolygon = polygon;
+    //         // continue;
+    //     // }
 
-        // multipolygon = martinez.union( polygon, multipolygon );
+    //     // multipolygon = martinez.union( polygon, multipolygon );
 
-    }
+    // }
 
-    return multipolygon;
+    // return multipolygon;
 
 }
 
 
-function extrudeMultiLine( multilines, width ) {
-    return multilines.map( line => extrudeLine( line, width ) );
+function extrudeMultiLine( multilines, width, height ) 
+{
+    const { position, normal, uv, indices } = extrudePolylines( multilines, { depth: height, lineWidth: width } );
+    let geom = new THREE.BufferGeometry();
+    
+    geom.setAttribute( "position", new THREE.BufferAttribute( position, 3 ) );
+    
+    if ( normal ) {
+        geom.setAttribute( "normal", new THREE.BufferAttribute( normal, 3 ) );
+    }
+
+    if ( uv ) {
+        geom.setAttribute( "uv", new THREE.BufferAttribute( uv, 2 ) );
+    }
+    
+    geom.setIndex( new THREE.BufferAttribute( indices, 1 ) );
+    geom = geom.toNonIndexed();
+    geom.rotateX( -Math.PI / 2 );
+    geom.computeVertexNormals();
+    return geom;
 }
 
 
@@ -227,19 +254,13 @@ function buildShape( coords ) {
         return shape;
     }
 
-    if ( coords[ 0 ][ 0 ] === NaN ) {
-        return shape;
-    }
-
-    console.log( coords );
-
     shape.moveTo( coords[ 0 ][ 0 ], coords[ 0 ][ 1 ] );
     
     for ( const point of coords.slice( 1 ) ) {
         shape.lineTo( point[ 0 ], point[ 1 ] );
     }
     
-    shape.closePath();
+    // shape.closePath();
     return shape;
     
 }
@@ -259,7 +280,7 @@ function buildPath( coords ) {
         path.lineTo( point[ 0 ], point[ 1 ] );
     }
     
-    path.closePath();
+    // path.closePath();
     return path;
     
 }
@@ -322,7 +343,7 @@ function toLocalLine( line, origin ) {
  * @returns MultiLineString
  */
 function toLocalMultiLine( multiline, origin ) {
-    return multiline.flatMap( line => toLocalLine( line, origin ) );
+    return multiline.map( line => toLocalLine( line, origin ) );
 }
 
 
@@ -506,7 +527,9 @@ function generateRoad( item ) {
     if ( RAIL_CLASSES.includes( props.class ) ) type = "railway";
     if ( [ "pedestrian" ].includes( props.class ) ) type = "path";
     if ( [ "track", "path" ].includes( props.class ) ) type = "path"; 
-    if ( ! type ) return;
+    if ( ! type ) {
+        return;
+    }
     // if ( [ "pedestrian", "street" ].includes( type ) ) return;
 
     if ( props.structure !== "none" ) {
@@ -531,26 +554,33 @@ function generateRoad( item ) {
     let width = $.config.widths.base;
     if ( props.lane_count ) width = props.lane_count * $.config.widths.propLane;
     else if ( props.type in ROAD_WIDTHS ) width = ROAD_WIDTHS[ props.type ];
-
-    let multipolygon;
+    
+    const height = $.heights[ type ];
+    let geojson;
+    let geom;
     
     if ( item.geometry.type === "LineString" ) {
-        const line = toLocalLine( item.geometry.coordinates, $.center );
-        multipolygon = extrudeLine( line, width );
+        geojson = toLocalLine( item.geometry.coordinates, $.center );
+        geom = extrudeLine( geojson, width, height );
     } else if ( item.geometry.type === "MultiLineString" ) {
-        const multiline = toLocalMultiLine( item.geometry.coordinates, $.center );
-        multipolygon = extrudeMultiLine( multiline, width );
+        geojson = toLocalMultiLine( item.geometry.coordinates, $.center );
+        geom = extrudeMultiLine( geojson, width, height );
     } else {
-        return;
+        geojson = toLocalGeometry( item.geometry, $.center );
+        geom = extrudeMultipolygon( geojson, height )
+        // return;
         // console.error( "invalid road type", item.geometry.type );
     }
+    
+    if ( geom.attributes.position.array.some( isNaN ) ) {
+        return;
+    }
 
-    if ( ! multipolygon ) return;
+    if ( ! $.geometries[ type ] ) $.geometries[ type ] = [];
+    $.geometries[ type ].push( geom );
 
-    console.log( multipolygon );
-
-    if ( ! $.polygons.road ) $.polygons.road = multipolygon;
-    else $.polygons.road.push( ...multipolygon );
+    // if ( ! $.polygons[ type ] ) $.polygons[ type ] = multipolygon;
+    // else $.polygons[ type ].push( ...multipolygon );
     // appendGeometry( multipolygon, "road" );
     
 }

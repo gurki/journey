@@ -53,11 +53,13 @@ export async function fetchTilesForBounds( bbox, zoom, urlTemplate, accessToken 
     if ( indices.length === 0 ) {
         console.error( `❌ no tiles for bounds ${JSON.stringify( bbox )}` );
     }
+
+    console.log( `⌛ fetching ${count} tiles …` );
     
     for ( const index of indices ) {
         
         count += 1;
-        console.log( `📥 fetching tile ${JSON.stringify(Object.values(index))} (${count}/${indices.length}) ...` );
+        console.log( `📥 fetching tile ${JSON.stringify(Object.values(index))} (${count}/${indices.length}) …` );
         
         const tile = await fetchTile( urlTemplate, index, accessToken );
         tiles.push( tile );

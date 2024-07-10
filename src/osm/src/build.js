@@ -2,13 +2,13 @@ import { STATE as $ } from "./state.js";
 import * as util from "../../arc/src/util.js";
 import { fetchGeojson } from "./fetch.js";
 import { fetchTilesForBounds } from "../../mvt/index.js"
-import { INTERSECTION, Brush, Evaluator, Operation, ADDITION, OperationGroup } from 'three-bvh-csg';
+import { Brush, Evaluator, ADDITION, INTERSECTION } from 'three-bvh-csg';
 import { extrudeGeoJSON } from "geometry-extrude";
 import Stroke from "extrude-polyline";
 import { expandPaths, extrudePolylines } from "poly-extrude";
 
 import * as THREE from "three"
-import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils";
+import { mergeGeometries, mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils";
 import polybool from "@velipso/polybool";
 import * as martinez from "martinez-polygon-clipping";
 
@@ -46,6 +46,54 @@ function addGround() {
 }
 
 
+function clipAll( brushes, clipBrush ) {
+
+    console.time( "⏱ clip" );
+    console.log( `clipping (num: ${brushes.length}) ...` );
+
+    const evaluator = new Evaluator();
+    const clipped = brushes.map( brush => evaluator.evaluate( brush, clipBrush, INTERSECTION ) );
+
+    console.timeEnd( "⏱ clip" );
+
+    return clipped;
+
+}
+
+
+function mergeCSG( geoms, depth ) {
+    
+    console.time( "⏱ merge" );
+    console.log( `merging (lvl: ${depth}, num: ${geoms.length}) ...` );
+    
+    const evaluator = new Evaluator();
+    const isEven = ( geoms.length % 2 ) === 0;
+    const count = Math.floor( geoms.length / 2 );
+    const left = geoms.slice( 0, count );
+    const right = geoms.slice( count, isEven ? geoms.length : geoms.length - 1 );
+
+    // console.log( `  length: ${geoms.length}, half: ${count}` );
+    // console.log( `  left: ${left.length}, right: ${right.length}` );
+    
+    let adds = isEven ? [] : [ geoms[ geoms.length - 1 ] ];
+    
+    for ( let i = 0; i < count; i++ ) {
+        // console.log( left[ i ], right[ i ] );
+        const add = evaluator.evaluate( left[ i ], right[ i ], ADDITION );
+        adds.push( add );
+    }
+
+    if ( adds.length === 1 ) {
+        return adds[ 0 ];
+    }
+
+    console.timeEnd( "⏱ merge" );
+
+    return mergeCSG( adds, depth + 1 );
+
+}
+
+
 async function build() {
 
     console.time( "⏱ build" );
@@ -73,11 +121,11 @@ async function build() {
 
         switch ( name ) {
             case "building": generateBuilding( feature ); break;
-            case "water": appendWorldGeometry( feature, "water" ); break;
-            case "road": generateRoad( feature ); break;
-            case "landuse":
-            case "structure":   //  hedge
-            case "landuse_overlay": generateLanduse( feature ); break;
+            // case "water": appendWorldGeometry( feature, "water" ); break;
+            // case "road": generateRoad( feature ); break;
+            // case "landuse":
+            // case "structure":   //  hedge
+            // case "landuse_overlay": generateLanduse( feature ); break;
         }
 
     });
@@ -92,67 +140,43 @@ async function build() {
 
     }
 
-    for ( const key in $.geometries ) {
-        const geom = mergeGeometries( $.geometries[ key ] );
-        const mesh = new THREE.Mesh( geom, $.materials[ key ] );
-        $.city.add( mesh );
-    }
+    // for ( const key in $.geometries ) {
+    //     const geom = mergeGeometries( $.geometries[ key ] );
+    //     const mesh = new THREE.Mesh( geom, $.materials[ key ] );
+    //     $.city.add( mesh );
+    // }
     
     //  merge objects
 
+
     const evaluator = new Evaluator();
-    evaluator.consolidateMaterials = true;
-    evaluator.useGroups = true;
+    evaluator.consolidateMaterials = false;
+    evaluator.useGroups = false;
+
+    const clipGeom = new THREE.BoxGeometry( $.worldTileSize.width, 1000, $.worldTileSize.height, 1, 1, 1 );
+    const clipBrush = new Brush( clipGeom );
+
+    const geoms = $.geometries.buildings;
+    const brushes = geoms.map( g => new Brush( g ) );
+    const clipped = clipAll( brushes, clipBrush );
+    const merged = mergeCSG( clipped, 0 );
+    merged.material = $.materials.buildings;
+    merged.geometry = mergeVertices( merged.geometry );
+    $.city.add( merged );
     
-    // const pedestrian = new Brush( mergeGeometries( $.geometries.pedestrian ), $.materials.pedestrian );
-    // const path = new Brush( mergeGeometries( $.geometries.path ), $.materials.path );
-    // const street = new Brush( mergeGeometries( $.geometries.street ), $.materials.street );
-    // const railway = new Brush( mergeGeometries( $.geometries.railway ), $.materials.railway );
-    // const buildings = new Brush( mergeGeometries( $.geometries.buildings ), $.materials.buildings );
-
-    // $.city.add( new THREE.Mesh( pedestrian, $.materials.pedestrian ) );
-    // $.city.add( path );
-    // $.city.add( street );
-    // $.city.add( railway );
-    
-    // let pedestrian = new Brush( mergeGeometries( $.geometries.pedestrian ), $.materials.pedestrian );
-
-    // let res = new Brush( new THREE.SphereGeometry( 0 ) );
-
-    // let count = 0;
-    // for ( const geom of $.geometries.path ) {
-    //     console.log( res, new Brush( geom ) );
-    //     res = evaluator.evaluate( new Brush( geom ), res, ADDITION );
-    //     count++;
-    //     if ( count > 20 ) { break }
-    // }
-
-    // $.city.add( res );
-    // group = evaluator.evaluate( group, new Brush( street, $.materials.street ), ADDITION );
-    
-    // let res;
-    // res = evaluator.evaluate( pedestrian, path, ADDITION );
-    // res = evaluator.evaluate( res, street, ADDITION );
-    // res = evaluator.evaluate( res, buildings, ADDITION );
-    // $.city.add( res );
-    
-
     //  clip
-
+    
     console.log( "✂ clipping ..." );
-
-    const cubeGeom = new THREE.BoxGeometry( $.worldTileSize.width, 1000, $.worldTileSize.height, 1, 1, 1 );
-    const cubeBrush = new Brush( cubeGeom );
-
-    for ( const child of $.city.children ) {
-        const childBrush = new Brush( child.geometry );
-        child.geometry.computeBoundingBox();
-        if ( child.geometry.boundingBox.isEmpty() ) {
-            continue;
-        }
-        const result = evaluator.evaluate( childBrush, cubeBrush, INTERSECTION );    
-        child.geometry = result.geometry;
-    }
+    
+    // const cubeGeom = new THREE.BoxGeometry( $.worldTileSize.width, 1000, $.worldTileSize.height, 1, 1, 1 );
+    // const cubeBrush = new Brush( cubeGeom );
+    
+    // for ( const child of $.city.children ) {
+    //     if ( ! child.geometry.attributes.position ) continue;
+    //     const childBrush = new Brush( child.geometry );
+        // const result = evaluator.evaluate( childBrush, cubeBrush, INTERSECTION );
+    //     child.geometry = result.geometry;
+    // }
 
     console.timeEnd( "⏱ build" );
 
@@ -160,38 +184,7 @@ async function build() {
 
 
 function extrudeLine( line, width, height ) {
-
     return extrudeMultiLine( [ line ], width, height );
-
-    // const stroke = new Stroke({ 
-    //     thickness: width,
-    //     cap: 'square',
-    //     join: 'bevel',
-    //     miterLimit: 10
-    // });
-    
-    // const { positions, cells } = stroke.build( line );
-
-    // let multipolygon = [];
-
-    // for ( const cell of cells ) {
-        
-    //     const [ id1, id2, id3 ] = cell;
-    //     const region = [ positions[ id1 ], positions[ id2 ], positions[ id3 ] ];
-    //     // const polygon = [ region ];
-        
-    //     multipolygon.push( [ region ] );
-    //     // if ( ! multipolygon ) {
-    //         // multipolygon = polygon;
-    //         // continue;
-    //     // }
-
-    //     // multipolygon = martinez.union( polygon, multipolygon );
-
-    // }
-
-    // return multipolygon;
-
 }
 
 
@@ -260,7 +253,10 @@ function buildShape( coords ) {
         shape.lineTo( point[ 0 ], point[ 1 ] );
     }
     
-    // shape.closePath();
+    if ( coords.length > 2 ) {
+        shape.closePath();
+    }
+
     return shape;
     
 }
@@ -491,7 +487,6 @@ function generateBuilding( item ) {
 
     const type = "buildings";
     const height = item.properties.height | $.config.defaults.levels;
-
     // const geom = generateExtrudedGeometry( item.geometry, height );
     
     const multipoly = toLocalGeometry( item.geometry, $.center );

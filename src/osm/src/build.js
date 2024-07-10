@@ -6,11 +6,13 @@ import { Brush, Evaluator, ADDITION, INTERSECTION } from 'three-bvh-csg';
 import { extrudeGeoJSON } from "geometry-extrude";
 import Stroke from "extrude-polyline";
 import { expandPaths, extrudePolylines } from "poly-extrude";
+import * as CSG from "csg2d";
 
 import * as THREE from "three"
 import { mergeGeometries, mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils";
 import polybool from "@velipso/polybool";
 import * as martinez from "martinez-polygon-clipping";
+import * as IGH from 'improved-greiner-hormann';
 
 
 // async function fetchData() {
@@ -74,17 +76,23 @@ function clipAndMerge( geoms, clipBrush ) {
 }
 
 
-function mergeAll( geoms, depth = 0 ) {
+function mergeAll( brushes, depth = 0 ) {
     
-    console.log( `merging (lvl: ${depth}, num: ${geoms.length}) ...` );
+    console.log( `merging (lvl: ${depth}, num: ${brushes.length}) ...` );
+
+    // if (  depth > 5 ) {
+    //     const group = new THREE.Group();
+    //     group.add( brushes );
+    //     return group;
+    // }
     
     const evaluator = new Evaluator();
-    const isEven = ( geoms.length % 2 ) === 0;
-    const count = Math.floor( geoms.length / 2 );
-    const left = geoms.slice( 0, count );
-    const right = geoms.slice( count, isEven ? geoms.length : geoms.length - 1 );
+    const isEven = ( brushes.length % 2 ) === 0;
+    const count = Math.floor( brushes.length / 2 );
+    const left = brushes.slice( 0, count );
+    const right = brushes.slice( count, isEven ? brushes.length : brushes.length - 1 );
 
-    let adds = isEven ? [] : [ geoms[ geoms.length - 1 ] ];
+    let adds = isEven ? [] : [ brushes[ brushes.length - 1 ] ];
     
     for ( let i = 0; i < count; i++ ) {
         const add = evaluator.evaluate( left[ i ], right[ i ], ADDITION );
@@ -126,8 +134,8 @@ async function build() {
         const name = props.layerName;
 
         switch ( name ) {
-            case "building": generateBuilding( feature ); break;
-            // case "water": appendWorldGeometry( feature, "water" ); break;
+            // case "building": generateBuilding( feature ); break;
+            case "water": appendWorldGeometry( feature, "water" ); break;
             // case "road": generateRoad( feature ); break;
             // case "landuse":
             // case "structure":   //  hedge
@@ -138,11 +146,29 @@ async function build() {
 
     for ( const type in $.polygons ) {
 
-        const multipolygon = $.polygons[ type ];
-        const geom = extrudeMultipolygon( multipolygon, $.heights[ type ] );
-        const mat = $.materials[ type ];
-        const mesh = new THREE.Mesh( geom, mat );
-        $.city.add( mesh );
+        let multipolygon = $.polygons[ type ];
+        
+        if ( multipolygon.length === 0 ) {
+            continue;
+        }
+
+        let res = CSG.fromPolygons( multipolygon[ 0 ] ).toPolygons();
+
+        for ( let i = 1; i < multipolygon.length; i++ ) {
+            const curr = CSG.fromPolygons( multipolygon[ i ] );
+            console.log( curr );
+            res = CSG.fromPolygons( res ).union( curr ).toPolygons();
+        }
+
+        multipolygon = res.toPolygons().map( poly => {
+            return poly.map( p => [ p.x, p.y ] );
+        });
+
+        console.log( multipolygon );
+
+        const geoms = extrudeMultipolygon( [ multipolygon ], $.heights[ type ] );
+        $.geometries[ type ] = [ geoms ];
+
 
     }
 
@@ -158,7 +184,9 @@ async function build() {
     const clipBrush = new Brush( clipGeom );
     
     for ( const key in $.geometries ) {
-        const mesh = clipAndMerge( $.geometries[ key ], clipBrush );
+        console.log( `mesh: ${key}` );
+        // const mesh = clipAndMerge( $.geometries[ key ], clipBrush );
+        const mesh = new THREE.Mesh( mergeVertices( mergeGeometries( $.geometries[ key ] ) ) );
         mesh.material = $.materials[ key ];
         $.city.add( mesh );
     };
@@ -364,7 +392,7 @@ function toLocalGeometry( geometry, origin ) {
     switch ( geometry.type ) {
         case "Polygon": return [ toLocalPolygon( geometry.coordinates, origin ) ];
         case "MultiPolygon": return toLocalMultiPolygon( geometry.coordinates, origin );
-        default: console.error( "not implemented yet", geometry.type );
+        // default: console.warning( "not implemented yet", geometry.type );
     }
 }
 
@@ -418,9 +446,9 @@ function appendWorldGeometry( item, type ) {
 }
 
 
-function appendGeometry( geometry, type ) {
-    $.polygons[ type ] = geometryUnion( geometry, $.polygons[ type ] );
-}
+// function appendGeometry( geometry, type ) {
+//     $.polygons[ type ] = geometryUnion( geometry, $.polygons[ type ] );
+// }
 
 
 function generateLanduse( item ) {

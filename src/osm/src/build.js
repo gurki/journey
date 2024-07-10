@@ -47,23 +47,35 @@ function addGround() {
 
 
 function clipAll( brushes, clipBrush ) {
-
-    console.time( "⏱ clip" );
-    console.log( `clipping (num: ${brushes.length}) ...` );
-
+    console.log( `✂ clipping (num: ${brushes.length}) ...` );
     const evaluator = new Evaluator();
-    const clipped = brushes.map( brush => evaluator.evaluate( brush, clipBrush, INTERSECTION ) );
+    return brushes.map( brush => evaluator.evaluate( brush, clipBrush, INTERSECTION ) );
+}
 
+
+function clipAndMerge( geoms, clipBrush ) {
+
+    const brushes = geoms.map( geom => new Brush( geom ) );
+    
+    console.time( "⏱ clip" );
+    const clipped = clipAll( brushes, clipBrush );
     console.timeEnd( "⏱ clip" );
 
-    return clipped;
+    console.time( "⏱ merge" );
+    const merged = mergeAll( clipped );
+    console.timeEnd( "⏱ merge" );
+    
+    console.time( "⏱ simplify" );
+    merged.geometry = mergeVertices( merged.geometry );
+    console.timeEnd( "⏱ simplify" );
+
+    return merged;
 
 }
 
 
-function mergeCSG( geoms, depth ) {
+function mergeAll( geoms, depth = 0 ) {
     
-    console.time( "⏱ merge" );
     console.log( `merging (lvl: ${depth}, num: ${geoms.length}) ...` );
     
     const evaluator = new Evaluator();
@@ -72,13 +84,9 @@ function mergeCSG( geoms, depth ) {
     const left = geoms.slice( 0, count );
     const right = geoms.slice( count, isEven ? geoms.length : geoms.length - 1 );
 
-    // console.log( `  length: ${geoms.length}, half: ${count}` );
-    // console.log( `  left: ${left.length}, right: ${right.length}` );
-    
     let adds = isEven ? [] : [ geoms[ geoms.length - 1 ] ];
     
     for ( let i = 0; i < count; i++ ) {
-        // console.log( left[ i ], right[ i ] );
         const add = evaluator.evaluate( left[ i ], right[ i ], ADDITION );
         adds.push( add );
     }
@@ -87,9 +95,7 @@ function mergeCSG( geoms, depth ) {
         return adds[ 0 ];
     }
 
-    console.timeEnd( "⏱ merge" );
-
-    return mergeCSG( adds, depth + 1 );
+    return mergeAll( adds, depth + 1 );
 
 }
 
@@ -148,36 +154,15 @@ async function build() {
     
     //  merge objects
 
-
-    const evaluator = new Evaluator();
-    evaluator.consolidateMaterials = false;
-    evaluator.useGroups = false;
-
     const clipGeom = new THREE.BoxGeometry( $.worldTileSize.width, 1000, $.worldTileSize.height, 1, 1, 1 );
     const clipBrush = new Brush( clipGeom );
-
-    const geoms = $.geometries.buildings;
-    const brushes = geoms.map( g => new Brush( g ) );
-    const clipped = clipAll( brushes, clipBrush );
-    const merged = mergeCSG( clipped, 0 );
-    merged.material = $.materials.buildings;
-    merged.geometry = mergeVertices( merged.geometry );
-    $.city.add( merged );
     
-    //  clip
+    for ( const key in $.geometries ) {
+        const mesh = clipAndMerge( $.geometries[ key ], clipBrush );
+        mesh.material = $.materials[ key ];
+        $.city.add( mesh );
+    };
     
-    console.log( "✂ clipping ..." );
-    
-    // const cubeGeom = new THREE.BoxGeometry( $.worldTileSize.width, 1000, $.worldTileSize.height, 1, 1, 1 );
-    // const cubeBrush = new Brush( cubeGeom );
-    
-    // for ( const child of $.city.children ) {
-    //     if ( ! child.geometry.attributes.position ) continue;
-    //     const childBrush = new Brush( child.geometry );
-        // const result = evaluator.evaluate( childBrush, cubeBrush, INTERSECTION );
-    //     child.geometry = result.geometry;
-    // }
-
     console.timeEnd( "⏱ build" );
 
 }

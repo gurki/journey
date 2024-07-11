@@ -1,5 +1,15 @@
 # Devlog
 
+## 24w28
+- huge ideas on increasing CSG performance
+- vector tile overlap is still a huge issue for it though, causing many artifacts
+- apparently, exactly matching geometry is no good for CSG addition
+- printed 1:5k scale model, first one with layer height settings
+- it's too thin, increase all the things 
+
+<img src="docs/vector-tile-overlap.png" width=320>
+
+
 ## 24w24..25-1
 
 ### elevation

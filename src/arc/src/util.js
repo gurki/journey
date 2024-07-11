@@ -5,7 +5,8 @@ export function gpsToEnu( refPoint, targetPoint ) {
 
     let east = geolib.getDistance(
         { latitude: refPoint.latitude, longitude: refPoint.longitude },
-        { latitude: refPoint.latitude, longitude: targetPoint.longitude }
+        { latitude: refPoint.latitude, longitude: targetPoint.longitude },
+        0.001
     );
     
     if ( targetPoint.longitude < refPoint.longitude ) {
@@ -14,7 +15,8 @@ export function gpsToEnu( refPoint, targetPoint ) {
 
     let north = geolib.getDistance(
         { latitude: refPoint.latitude, longitude: refPoint.longitude },
-        { latitude: targetPoint.latitude, longitude: refPoint.longitude }
+        { latitude: targetPoint.latitude, longitude: refPoint.longitude },
+        0.001
     );
 
     if ( targetPoint.latitude < refPoint.latitude ) {
@@ -38,7 +40,8 @@ export function gpsArrToEnu( refPoint, targetPoint ) {
 
     let east = geolib.getDistance(
         { latitude: refPoint.latitude, longitude: refPoint.longitude },
-        { latitude: refPoint.latitude, longitude: lon }
+        { latitude: refPoint.latitude, longitude: lon },
+        0.001
     );
     
     if ( lon < refPoint.longitude ) {
@@ -47,7 +50,8 @@ export function gpsArrToEnu( refPoint, targetPoint ) {
 
     let north = geolib.getDistance(
         { latitude: refPoint.latitude, longitude: refPoint.longitude },
-        { latitude: lat, longitude: refPoint.longitude }
+        { latitude: lat, longitude: refPoint.longitude },
+        0.001
     );
 
     if ( lat < refPoint.latitude ) {

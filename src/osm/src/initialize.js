@@ -31,7 +31,7 @@ function computeDerived() {
 
     for ( const type in $.config.colors ) {
         const color = $.config.colors[ type ];
-        $.materials[ type ] = new THREE.MeshStandardMaterial( { color, opacity: 0.8, transparent: true } );
+        $.materials[ type ] = new THREE.MeshPhongMaterial( { color, opacity: 0.8, transparent: true } );
     }
 
     $.worldTileSize = {

@@ -5,6 +5,10 @@ import { GLTFExporter } from "three/examples/jsm/Addons.js";
 
 export function exportSTL() {
     
+    // $.city.traverse( child => {
+    //     if ( ! child.geometry ) return;
+    //     child.geometry = child.geometry.toNonIndexed();
+    // });
     $.city.rotation.set( Math.PI / 2, 0, 0 );
     $.city.updateMatrixWorld();
 

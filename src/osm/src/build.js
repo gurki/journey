@@ -6,13 +6,11 @@ import { Brush, Evaluator, ADDITION, INTERSECTION } from 'three-bvh-csg';
 import { extrudeGeoJSON } from "geometry-extrude";
 import Stroke from "extrude-polyline";
 import { expandPaths, extrudePolylines } from "poly-extrude";
-import * as CSG from "csg2d";
 
 import * as THREE from "three"
 import { mergeGeometries, mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils";
 import polybool from "@velipso/polybool";
 import * as martinez from "martinez-polygon-clipping";
-import * as IGH from 'improved-greiner-hormann';
 
 
 // async function fetchData() {
@@ -57,7 +55,10 @@ function clipAll( brushes, clipBrush ) {
 
 function clipAndMerge( geoms, clipBrush ) {
 
-    const brushes = geoms.map( geom => new Brush( geom ) );
+    console.time( "⏱ simplify" );
+    const simple = geoms.map( geom => mergeVertices( geom, 0.1 ) );
+    const brushes = simple.map( geom => new Brush( geom ) );
+    console.timeEnd( "⏱ simplify" );
     
     console.time( "⏱ clip" );
     const clipped = clipAll( brushes, clipBrush );
@@ -66,10 +67,6 @@ function clipAndMerge( geoms, clipBrush ) {
     console.time( "⏱ merge" );
     const merged = mergeAll( clipped );
     console.timeEnd( "⏱ merge" );
-    
-    console.time( "⏱ simplify" );
-    merged.geometry = mergeVertices( merged.geometry );
-    console.timeEnd( "⏱ simplify" );
 
     return merged;
 
@@ -134,8 +131,8 @@ async function build() {
         const name = props.layerName;
 
         switch ( name ) {
-            // case "building": generateBuilding( feature ); break;
-            case "water": appendWorldGeometry( feature, "water" ); break;
+            case "building": generateBuilding( feature ); break;
+            // case "water": appendWorldGeometry( feature, "water" ); break;
             // case "road": generateRoad( feature ); break;
             // case "landuse":
             // case "structure":   //  hedge
@@ -144,33 +141,22 @@ async function build() {
 
     });
 
-    for ( const type in $.polygons ) {
+    // for ( const type in $.polygons ) {
 
-        let multipolygon = $.polygons[ type ];
+    //     const multipolygon = $.polygons[ type ];
         
-        if ( multipolygon.length === 0 ) {
-            continue;
-        }
+    //     if ( multipolygon.length === 0 ) {
+    //         continue;
+    //     }
 
-        let res = CSG.fromPolygons( multipolygon[ 0 ] ).toPolygons();
+    //     const geoms = multipolygon.map( polygon => {
+    //         // return extrudeMultipolygon( [ polygon ], $.heights[ type ] );
+    //         return extrudeMultipolygon( [ polygon ], $.heights[ type ] );
+    //     });
 
-        for ( let i = 1; i < multipolygon.length; i++ ) {
-            const curr = CSG.fromPolygons( multipolygon[ i ] );
-            console.log( curr );
-            res = CSG.fromPolygons( res ).union( curr ).toPolygons();
-        }
+    //     $.geometries[ type ] = geoms;
 
-        multipolygon = res.toPolygons().map( poly => {
-            return poly.map( p => [ p.x, p.y ] );
-        });
-
-        console.log( multipolygon );
-
-        const geoms = extrudeMultipolygon( [ multipolygon ], $.heights[ type ] );
-        $.geometries[ type ] = [ geoms ];
-
-
-    }
+    // }
 
     // for ( const key in $.geometries ) {
     //     const geom = mergeGeometries( $.geometries[ key ] );
@@ -183,12 +169,31 @@ async function build() {
     const clipGeom = new THREE.BoxGeometry( $.worldTileSize.width, 1000, $.worldTileSize.height, 1, 1, 1 );
     const clipBrush = new Brush( clipGeom );
     
+    function getRandomColor() {
+        const r = Math.floor(Math.random() * 256);
+        const g = Math.floor(Math.random() * 256);
+        const b = Math.floor(Math.random() * 256);
+        return (r << 16) | (g << 8) | b;
+    }
+
     for ( const key in $.geometries ) {
-        console.log( `mesh: ${key}` );
-        // const mesh = clipAndMerge( $.geometries[ key ], clipBrush );
-        const mesh = new THREE.Mesh( mergeVertices( mergeGeometries( $.geometries[ key ] ) ) );
-        mesh.material = $.materials[ key ];
-        $.city.add( mesh );
+
+        
+        const geoms = $.geometries[ key ];
+
+        for ( const geom of geoms ) {
+            // const mesh = clipAndMerge( $.geometries[ key ], clipBrush );
+            const mesh = new THREE.Mesh( geom );
+            mesh.material = new THREE.MeshPhongMaterial( { color: getRandomColor(), opacity: 0.8, transparent: true } );
+            $.city.add( mesh );
+        }
+
+        // const wireframe = new THREE.WireframeGeometry( mesh.geometry );
+        // const line = new THREE.LineSegments( wireframe );
+        // line.material.depthTest = false;
+        // line.material.opacity = 0.5;
+        // line.material.transparent = true;
+        // $.scene.add( line );
     };
     
     console.timeEnd( "⏱ build" );

@@ -10,6 +10,10 @@
 <img src="docs/vector-tile-overlap.png" width=320>
 
 
+## 24w...
+- migrate to mapbox and implement all the things to support vector tiles directly
+
+
 ## 24w24..25-1
 
 ### elevation

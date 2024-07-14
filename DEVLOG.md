@@ -1,13 +1,35 @@
 # Devlog
 
+
 ## 24w28
+
+### union glitches
 - huge ideas on increasing CSG performance
 - vector tile overlap is still a huge issue for it though, causing many artifacts
 - apparently, exactly matching geometry is no good for CSG addition
+
+### first layer-optimized print
 - printed 1:5k scale model, first one with layer height settings
 - it's too thin, increase all the things 
 
 <img src="docs/vector-tile-overlap.png" width=320>
+
+### glitch debugging
+- narrowed down objects to two overlapping buildings with glitching polygons
+- couldn't find a solution to fix it using `three-bvh` 
+- tried out `csg.js` with better results
+
+### new libraries
+- try `three-csg-ts` 
+- performs better in high-precision unions
+- suffers same non-manifold edges export issue
+- discover `jscad` and `openjscad` 
+- could be a great library for shared 2d/3d logic
+- major rewrite to be done ...
+- tried many, many variants and options with different frameworks
+- also doesn't fix non-manifold, so just accepting it for now
+
+<img src="docs/non-manifold-struggles.png" height=320>
 
 
 ## 24w...

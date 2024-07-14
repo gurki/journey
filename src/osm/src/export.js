@@ -1,6 +1,22 @@
 import { STATE as $ } from "./state.js";
 import { STLExporter } from 'three/addons/exporters/STLExporter.js';
 import { GLTFExporter } from "three/examples/jsm/Addons.js";
+import { serialize, mimeType } from "@jscad/3mf-serializer";
+
+
+export function export3MF( geom3 ) {
+    
+    const result = serialize( { units: "millimeters" }, geom3 )
+    const blob = new Blob( result, { type: mimeType } );
+    const link = document.createElement( 'a' );
+    link.href = window.URL.createObjectURL( blob );
+    link.download = 'model.3mf';
+    document.body.appendChild( link );
+    link.click();
+    document.body.removeChild( link );
+
+}
+
 
 
 export function exportSTL() {

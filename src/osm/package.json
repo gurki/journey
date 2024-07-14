@@ -28,6 +28,7 @@
     "polybooljs": "^1.2.2",
     "three": "^0.165.0",
     "three-bvh-csg": "^0.0.16",
+    "three-csg-ts": "^3.2.0",
     "tweakpane": "^4.0.3"
   }
 }

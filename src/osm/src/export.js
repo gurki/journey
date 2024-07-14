@@ -9,20 +9,21 @@ export function exportSTL() {
     //     if ( ! child.geometry ) return;
     //     child.geometry = child.geometry.toNonIndexed();
     // });
+    const prev = $.city.rotation.clone();
     $.city.rotation.set( Math.PI / 2, 0, 0 );
     $.city.updateMatrixWorld();
 
     const exporter = new STLExporter();
     const result = exporter.parse( $.city, { binary: true } );
-    const blob = new Blob([result], { type: 'application/octet-stream' });
-    const link = document.createElement('a');
-    link.href = window.URL.createObjectURL(blob);
+    const blob = new Blob( [result], { type: 'application/octet-stream' } );
+    const link = document.createElement( 'a' );
+    link.href = window.URL.createObjectURL( blob );
     link.download = 'model.stl';
-    document.body.appendChild(link);
+    document.body.appendChild( link );
     link.click();
-    document.body.removeChild(link);
+    document.body.removeChild( link );
 
-    $.city.rotation.set( 0, 0, 0 );
+    $.city.rotation.copy( prev );
     $.city.updateMatrixWorld();
 
 }

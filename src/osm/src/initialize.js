@@ -31,7 +31,7 @@ function computeDerived() {
 
     for ( const type in $.config.colors ) {
         const color = $.config.colors[ type ];
-        $.materials[ type ] = new THREE.MeshPhongMaterial( { color, opacity: 0.8, transparent: true } );
+        $.materials[ type ] = new THREE.MeshStandardMaterial( { color, opacity: 0.8, transparent: true } );
     }
 
     $.worldTileSize = {
@@ -87,11 +87,13 @@ function initRenderer() {
     $.container.appendChild( $.renderer.domElement );
 
     $.camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 10000 );
-    $.camera.position.set( 0, 160, 160 );
+    $.camera.position.set( 0, 160, 190 );
+    // $.camera.position.set( -82.4413977990377, 36.97457209378799, 60.04733644833405 );
 
     $.controls = new MapControls( $.camera, $.renderer.domElement );
     $.controls.enableDamping = true;
     $.controls.target.set( 0, 0, 10 );
+    // $.controls.target.set( -70.24102308526932, 0, 60.131594706143325 );
     $.controls.update();
 
     window.addEventListener( "resize", resize, false );

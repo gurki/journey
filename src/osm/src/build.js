@@ -6,6 +6,7 @@ import { Brush, Evaluator, ADDITION, INTERSECTION } from 'three-bvh-csg';
 import { extrudeGeoJSON } from "geometry-extrude";
 import Stroke from "extrude-polyline";
 import { expandPaths, extrudePolylines } from "poly-extrude";
+import { CSG } from "three-csg-ts";
 
 import * as THREE from "three"
 import { mergeGeometries, mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils";
@@ -48,16 +49,58 @@ function addGround() {
 
 function clipAll( brushes, clipBrush ) {
     console.log( `✂ clipping (num: ${brushes.length}) ...` );
-    const evaluator = new Evaluator();
-    return brushes.map( brush => evaluator.evaluate( brush, clipBrush, INTERSECTION ) );
+    return brushes.map( brush => brush.intersect( clipBrush ) );
+}
+
+
+function mergeDisjunct( geoms ) {
+    
+    console.log( `start: ${geoms.length}` );
+    
+    const disjuncts = geoms;
+    let succ = true;
+    
+    while ( succ ) {
+        
+        succ = false;
+        
+        for ( const curr of disjuncts ) {      
+            
+            const disjunctId = disjuncts.findIndex( geom => ! curr.boundingSphere.intersectsSphere( geom.boundingSphere ) );
+            
+            if ( disjunctId < 0 ) {
+                continue;
+            }
+            
+            const [ disjunctA ] = disjuncts.splice( disjunctId, 1 );
+            const [ disjunctB ] = disjuncts.splice( disjuncts.indexOf( curr ), 1 );
+            const merge = mergeGeometries( [ disjunctA, disjunctB ] );
+            merge.computeBoundingSphere();
+            disjuncts.push( merge );            
+            succ = true;
+            break;
+            
+        }
+        
+    }
+
+    console.log( `end: ${disjuncts.length}` );
+    return disjuncts;
+
 }
 
 
 function clipAndMerge( geoms, clipBrush ) {
 
     console.time( "⏱ simplify" );
+    // const simple = geoms.map( geom => mergeVertices( geom, 0.1 ) ).slice( 2000, 1000 );
     const simple = geoms.map( geom => mergeVertices( geom, 0.1 ) );
-    const brushes = simple.map( geom => new Brush( geom ) );
+    simple.forEach( geom => geom.computeBoundingSphere() );
+
+    const disjuncts = simple;
+    // const disjuncts = mergeDisjunct( simple );
+    
+    const brushes = disjuncts.map( geom => CSG.fromGeometry( geom ) );
     console.timeEnd( "⏱ simplify" );
     
     console.time( "⏱ clip" );
@@ -65,10 +108,11 @@ function clipAndMerge( geoms, clipBrush ) {
     console.timeEnd( "⏱ clip" );
 
     console.time( "⏱ merge" );
-    const merged = mergeAll( clipped );
+    const merged = mergeAll( brushes );
     console.timeEnd( "⏱ merge" );
 
-    return merged;
+    const cleanup = mergeVertices( merged.toGeometry( new THREE.Matrix4() ), 0.1 ).toNonIndexed();
+    return new THREE.Mesh( cleanup );
 
 }
 
@@ -77,13 +121,6 @@ function mergeAll( brushes, depth = 0 ) {
     
     console.log( `merging (lvl: ${depth}, num: ${brushes.length}) ...` );
 
-    // if (  depth > 5 ) {
-    //     const group = new THREE.Group();
-    //     group.add( brushes );
-    //     return group;
-    // }
-    
-    const evaluator = new Evaluator();
     const isEven = ( brushes.length % 2 ) === 0;
     const count = Math.floor( brushes.length / 2 );
     const left = brushes.slice( 0, count );
@@ -92,7 +129,7 @@ function mergeAll( brushes, depth = 0 ) {
     let adds = isEven ? [] : [ brushes[ brushes.length - 1 ] ];
     
     for ( let i = 0; i < count; i++ ) {
-        const add = evaluator.evaluate( left[ i ], right[ i ], ADDITION );
+        const add = left[ i ].union( right[ i ] );
         adds.push( add );
     }
 
@@ -131,9 +168,9 @@ async function build() {
         const name = props.layerName;
 
         switch ( name ) {
-            case "building": generateBuilding( feature ); break;
+            // case "building": generateBuilding( feature ); break;
             // case "water": appendWorldGeometry( feature, "water" ); break;
-            // case "road": generateRoad( feature ); break;
+            case "road": generateRoad( feature ); break;
             // case "landuse":
             // case "structure":   //  hedge
             // case "landuse_overlay": generateLanduse( feature ); break;
@@ -141,22 +178,22 @@ async function build() {
 
     });
 
-    // for ( const type in $.polygons ) {
+    for ( const type in $.polygons ) {
 
-    //     const multipolygon = $.polygons[ type ];
+        const multipolygon = $.polygons[ type ];
         
-    //     if ( multipolygon.length === 0 ) {
-    //         continue;
-    //     }
+        if ( multipolygon.length === 0 ) {
+            continue;
+        }
 
-    //     const geoms = multipolygon.map( polygon => {
-    //         // return extrudeMultipolygon( [ polygon ], $.heights[ type ] );
-    //         return extrudeMultipolygon( [ polygon ], $.heights[ type ] );
-    //     });
+        const geoms = multipolygon.map( polygon => {
+            // return extrudeMultipolygon( [ polygon ], $.heights[ type ] );
+            return extrudeMultipolygon( [ polygon ], $.heights[ type ] );
+        });
 
-    //     $.geometries[ type ] = geoms;
+        $.geometries[ type ] = geoms;
 
-    // }
+    }
 
     // for ( const key in $.geometries ) {
     //     const geom = mergeGeometries( $.geometries[ key ] );
@@ -167,7 +204,7 @@ async function build() {
     //  merge objects
 
     const clipGeom = new THREE.BoxGeometry( $.worldTileSize.width, 1000, $.worldTileSize.height, 1, 1, 1 );
-    const clipBrush = new Brush( clipGeom );
+    const clipBrush = CSG.fromGeometry( clipGeom );
     
     function getRandomColor() {
         const r = Math.floor(Math.random() * 256);
@@ -176,16 +213,44 @@ async function build() {
         return (r << 16) | (g << 8) | b;
     }
 
+
     for ( const key in $.geometries ) {
 
-        
+        console.log( key );
         const geoms = $.geometries[ key ];
+        const filtered = geoms.filter( geom => {
+            // const pos0 = new THREE.Vector3().fromBufferAttribute( geom.attributes.position, 0 );
+            // if ( pos0.x > -520 || pos0.x < -560 ) return false;
+            // if ( pos0.z < 425 ) return false;
+            // if ( pos0.z > 440 ) return false;
+            // if ( pos0.x > -200 || pos0.x < -300 ) return false;
+            // if ( pos0.z < 200 ) return false;
+            // if ( pos0.z > 400 ) return false;
+            return true;
+        })
 
-        for ( const geom of geoms ) {
-            // const mesh = clipAndMerge( $.geometries[ key ], clipBrush );
-            const mesh = new THREE.Mesh( geom );
-            mesh.material = new THREE.MeshPhongMaterial( { color: getRandomColor(), opacity: 0.8, transparent: true } );
+        let count = 0;
+        const mesh = clipAndMerge( filtered, clipBrush );
+
+        // const pos = mesh.geometry.attributes.position.array;
+        // mesh.geometry.attributes.position.set( pos.map( n => Math.round( n * 1 ) / 1 ) );
+        // const norm = mesh.geometry.attributes.normal.array;
+        // mesh.geometry.attributes.normal.set( norm.map( n => Math.round( n * 100 ) / 100 ) );
+        // mesh.geometry.needsUpdate = true;
+        // console.log( pos );
+        // mesh.geometry = mergeVertices( mesh.geometry, 1 );
+
+        for ( const geom of filtered ) {
+            
+            // geom.translate( count * 20, 0, count * 20 );
+            count++;
+            // console.log( geom );
+            // const mesh = new THREE.Mesh( geom );
+            // mesh.material = new THREE.MeshStandardMaterial( { color: getRandomColor(), opacity: 0.8, transparent: true } );
+            mesh.material = $.materials[ key ];
             $.city.add( mesh );
+            // $.lols = mesh;
+
         }
 
         // const wireframe = new THREE.WireframeGeometry( mesh.geometry );
@@ -194,6 +259,8 @@ async function build() {
         // line.material.opacity = 0.5;
         // line.material.transparent = true;
         // $.scene.add( line );
+
+
     };
     
     console.timeEnd( "⏱ build" );

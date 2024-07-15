@@ -8,7 +8,7 @@ import * as THREE from "three"
 import { mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { VertexNormalsHelper } from 'three/addons/helpers/VertexNormalsHelper.js';
 import * as jscad from "@jscad/modeling";
-import { export3MF } from "./src/export.js";
+import { export3MF, exportSTL } from "./src/export.js";
 import { CSG } from "three-csg-ts";
 import { geom3, poly3 } from '@jscad/modeling/src/geometries';
 
@@ -106,6 +106,7 @@ const mesh = new THREE.Mesh( union, new THREE.MeshStandardMaterial( { color: "gr
 $.city.add( mesh );
 
 // export3MF( union3 );
+// exportSTL();
 
 // const wireframe = new THREE.WireframeGeometry( union );
 // $.scene.add( new THREE.LineSegments( wireframe ) );

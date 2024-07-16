@@ -1,14 +1,16 @@
 import { STATE as $ } from "./state.js";
 import { fetchTilesForBounds } from "../../mvt/index.js";
-import * as GEOM2 from "./geom2.js";
-import * as GEOM3 from "./geom3.js";
+import * as GEOM2 from "./cad/geom2.js";
+import * as GEOM3 from "./cad/geom3.js";
 import * as jscad from "@jscad/modeling";
 
 import * as THREE from "three";
 
-const MERGE = false;
+const CLIP = true;
+const MERGE = true;
 const TYPES = [
     "buildings",
+    "water",
     "parks",
     "greenery",
     "stone",
@@ -56,6 +58,7 @@ function addGround() {
 async function build() {
 
     console.time( "⏱ build" );
+
     
     //  fetch data
 
@@ -86,16 +89,16 @@ async function build() {
             return;
         }
         
-        const props = feature.properties;       
+        const props = feature.properties;  
         const name = props.layerName;
 
         switch ( name ) {
-            case "building": appendBuilding( feature ); break;
-            // case "water": appendWorldGeometry( feature, "water" ); break;
+            case "building": appendBuilding( feature, clip2 ); break;
+            case "water": appendWater( feature, clip2 ); break;
             // case "road": generateRoad( feature, clip2 ); break;
             case "landuse":
             case "structure":   //  hedge
-            case "landuse_overlay": appendLanduse( feature ); break;
+            case "landuse_overlay": appendLanduse( feature, clip2 ); break;
             default: return;
         }
 
@@ -127,14 +130,22 @@ async function build() {
             continue;
         }
 
-        const allClipped = geom2s.map( geom2 => Object.assign( {}, jscad.booleans.intersect( geom2, clip2 ), { type, height: geom2.height } ));
+        const allClipped = CLIP ? geom2s.map( geom2 => Object.assign( {}, jscad.booleans.intersect( geom2, clip2 ), { type, height: geom2.height } )) : geom2s;
         const clipped = allClipped.filter( geom2 => geom2.sides.length > 0 );
 
         if ( clipped.length === 0 ) {
             continue;
         }
 
-        const geom3s = clipped.map( geom2 => GEOM3.extrude( geom2, geom2.height ) );
+        const sizeable = clipped.filter( geom2 => {
+            // const dims = jscad.measurements.measureDimensions( geom2 );
+            // return dims[0] > 2 || dims[1] > 2;
+            return true;
+        });
+
+        // console.log( geom2s.length - sizeable.length );
+
+        const geom3s = sizeable.map( geom2 => GEOM3.extrude( geom2, geom2.height ) );
         geom3map[ type ].push( ...geom3s );
         
     }
@@ -155,7 +166,8 @@ async function build() {
             continue;
         }
 
-        const maybeMerged = MERGE ? [ GEOM3.mergeAll( geom3s ) ] : geom3s;
+        const shouldMerge = ( type !== "buildings" ) && MERGE;
+        const maybeMerged = shouldMerge ? [ GEOM3.mergeAll( geom3s ) ] : geom3s;
 
         for ( const geom3 of maybeMerged ) {
             const bgeom = GEOM3.toBufferGeometry( geom3 );
@@ -227,6 +239,19 @@ function appendBuilding( feature ) {
 
     const type = "buildings";
     const height = feature.properties.height | $.config.defaults.levels;
+    
+    const geom2 = GEOM2.fromGeoJSON( feature, $.center );
+    geom2.type = type;
+    geom2.height = height;
+    geom2map[ type ].push( geom2 );
+
+}
+
+
+function appendWater( feature ) {
+
+    const type = "water";
+    const height = $.heights[ type ];
     
     const geom2 = GEOM2.fromGeoJSON( feature, $.center );
     geom2.type = type;

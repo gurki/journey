@@ -1,5 +1,5 @@
 import { STATE as $ } from "./state.js";
-import { initTweakpane } from "./pane.js";
+import { initTweakpane } from "./gui.js";
 import * as util from "../../arc/src/util.js";
 
 import { MapControls } from "three/examples/jsm/controls/MapControls";

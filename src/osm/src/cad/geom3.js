@@ -41,8 +41,12 @@ export function extrude( geom2, height ) {
 
 export function mergeAll( geom3s ) {
 
-    if ( geom3s.length <= 1 ) {
-        return geom3s;
+    if ( geom3s.length === 0 ) {
+        return undefined;
+    }
+
+    if ( geom3s.length === 1 ) {
+        return geom3s[ 0 ];
     }
 
     const n = geom3s.length;

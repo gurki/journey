@@ -9,7 +9,7 @@ export function fromGeoJSON( feature, gpsOrigin ) {
     const coords = feature.geometry.coordinates;
 
     switch ( type ) {
-        case "Polygon": return fromPolygon( coords.slice( 0, 1 ), gpsOrigin );
+        case "Polygon": return fromPolygon( coords, gpsOrigin );
         case "MultiPolygon": return fromMultipolygon( coords, gpsOrigin );
         default: console.warn( `geom2: unsupported geometry ${type} for feature ${layer}` );
     } 

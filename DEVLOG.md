@@ -1,6 +1,13 @@
 # Devlog
 
 
+## 24w29 
+jscad fun
+- extrude no issues
+- boolean operations sometimes issues
+- very fast
+
+
 ## 24w28
 
 ### union glitches

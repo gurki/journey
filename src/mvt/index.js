@@ -48,7 +48,6 @@ export async function fetchTilesForBounds( bbox, zoom, urlTemplate, accessToken 
     const indices = tileIndicesForBounds( bbox, zoom );
     const tiles = [];
     let count = 0;
-
     
     if ( indices.length === 0 ) {
         console.error( `❌ no tiles for bounds ${JSON.stringify( bbox )}` );

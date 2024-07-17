@@ -2,10 +2,28 @@
 
 
 ## 24w29 
-jscad fun
+
+### jscad fun
 - extrude no issues
 - boolean operations sometimes issues
 - very fast
+- finally split code a bit into geojson and cad modules
+- winding order is a bitch! jscad expects CW, geojson is CCW outer ring and CW inner rings
+- properly handle geojson holes by boolean subtract operation in jscad from outer geom2
+- speed actually pretty impressive, even without spatial acceleration structures
+- union of the whole map causes lots of non-manifold edges
+- union of just the various categories solves most flicker issues and bambu studio is happy, too
+
+<img src="docs/jscad-winding-order.png" width=320>
+
+### roads
+- start path2 parsing and expansion
+- everything is now split into a nice, consistent process pipeline
+
+> path2 -[expand]-> geom2 -[extrude]-> geom3 -[union]-> mesh
+
+<img src="docs/path2/path2.png" width=320>
+<img src="docs/path2/path2-expand.png" width=320>
 
 
 ## 24w28

@@ -7,7 +7,10 @@ export function enuToOgl( enu ) {
 
 
 export function toLocalPolygon( polygon, gpsOrigin ) {
-    return polygon.map( region =>
-        region.map( coord => util.gpsArrToEnu( gpsOrigin, coord ) )
-    );
+    return polygon.map( region => toLocalLineString( region, gpsOrigin ) );
+}
+
+
+export function toLocalLineString( lineString, gpsOrigin ) {
+    return lineString.map( coord => util.gpsArrToEnu( gpsOrigin, coord ) );
 }

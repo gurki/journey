@@ -1,5 +1,6 @@
 import { STATE as $ } from "./state.js";
 import { fetchTilesForBounds } from "../../mvt/index.js";
+import * as PATH2 from "./cad/path2.js";
 import * as GEOM2 from "./cad/geom2.js";
 import * as GEOM3 from "./cad/geom3.js";
 import * as jscad from "@jscad/modeling";
@@ -15,6 +16,9 @@ const TYPES = [
     "greenery",
     "stone",
     "pedestrian",
+    "street",
+    "railway",
+    "path"
 ];
 
 let path2map = {};
@@ -93,12 +97,12 @@ async function build() {
         const name = props.layerName;
 
         switch ( name ) {
-            case "building": appendBuilding( feature, clip2 ); break;
-            case "water": appendWater( feature, clip2 ); break;
-            // case "road": generateRoad( feature, clip2 ); break;
-            case "landuse":
-            case "structure":   //  hedge
-            case "landuse_overlay": appendLanduse( feature, clip2 ); break;
+            // case "building": appendBuilding( feature, clip2 ); break;
+            // case "water": appendWater( feature, clip2 ); break;
+            case "road": appendRoad( feature, clip2 ); break;
+            // case "landuse":
+            // case "structure":   //  hedge
+            // case "landuse_overlay": appendLanduse( feature, clip2 ); break;
             default: return;
         }
 
@@ -113,7 +117,50 @@ async function build() {
 
     console.log( "🛣️ expanding path2 to geom2 ..." );
     console.time( "⏱ path2 -> geom2" );
-    //  TODO
+    
+    for ( const type of TYPES ) {
+        
+        const path2s = path2map[ type ];
+
+        if ( path2s.length === 0 ) {
+            continue;
+        }
+
+        // path2s.forEach( path2 => {
+        //     const points = path2.points.map( p => new THREE.Vector2( p[0], p[1] ) );
+        //     const geom = new THREE.BufferGeometry().setFromPoints( points );
+        //     geom.rotateX( -Math.PI / 2 );
+        //     geom.translate( 0, 1, 0 );
+        //     const mesh = new THREE.Line( 
+        //         geom,
+        //         new THREE.LineBasicMaterial( { color: 0xff0000 } )
+        //     );
+        //     $.city.add( mesh );
+        // });
+
+        const exps = path2s.map( path2 => Object.assign( {}, 
+            jscad.expansions.expand( { delta: path2.width, corners: "edge", segments: 16 }, path2 ), 
+            { type, height: path2.height } 
+        ));
+
+        console.log( exps );
+        exps.forEach( geom2 => {
+            const points = jscad.geometries.geom2.toPoints( geom2 ).map( p => new THREE.Vector2( p[0], p[1] ) );
+            const geom = new THREE.BufferGeometry().setFromPoints( points );
+            geom.rotateX( -Math.PI / 2 );
+            geom.translate( 0, 1, 0 );
+            const mesh = new THREE.Line( 
+                geom,
+                new THREE.LineBasicMaterial( { color: 0xff0000 } )
+            );
+            $.city.add( mesh );
+        });
+        
+
+        geom2map[ type ].push( ...exps );
+
+    }
+
     console.timeEnd( "⏱ path2 -> geom2" );
 
 
@@ -130,7 +177,11 @@ async function build() {
             continue;
         }
 
-        const allClipped = CLIP ? geom2s.map( geom2 => Object.assign( {}, jscad.booleans.intersect( geom2, clip2 ), { type, height: geom2.height } )) : geom2s;
+        const allClipped = CLIP ? geom2s.map( geom2 => Object.assign( {}, 
+            jscad.booleans.intersect( geom2, clip2 ), 
+            { type, height: geom2.height } 
+        )) : geom2s;
+        
         const clipped = allClipped.filter( geom2 => geom2.sides.length > 0 );
 
         if ( clipped.length === 0 ) {
@@ -145,8 +196,10 @@ async function build() {
 
         // console.log( geom2s.length - sizeable.length );
 
-        const geom3s = sizeable.map( geom2 => GEOM3.extrude( geom2, geom2.height ) );
-        geom3map[ type ].push( ...geom3s );
+        const geom3s = sizeable.map( geom2 => {
+            return GEOM3.extrude( geom2, geom2.height ) 
+        });
+        // geom3map[ type ].push( ...geom3s );
         
     }
     
@@ -261,63 +314,83 @@ function appendWater( feature ) {
 }
 
 
-// function generateRoad( feature ) {
+function appendRoad( feature ) {
     
-//     const STREET_CLASSES = [ 
-//         "motorway", "motorway_link", 
-//         "trunk", "trunk_link", 
-//         "primary", "primary_link", 
-//         "secondary", "secondary_link", 
-//         "tertiary", "tertiary_link", 
-//         "street", "street_limited"
-//     ];
+    const STREET_CLASSES = [ 
+        "motorway", "motorway_link", 
+        "trunk", "trunk_link", 
+        "primary", "primary_link", 
+        "secondary", "secondary_link", 
+        "tertiary", "tertiary_link", 
+        "street", "street_limited"
+    ];
 
-//     const RAIL_CLASSES = [
-//         "major_rail", 
-//         "minor_rail", 
-//         "service_rail"
-//     ];
+    const RAIL_CLASSES = [
+        "major_rail", 
+        "minor_rail", 
+        "service_rail"
+    ];
 
-//     const props = feature.properties;
-//     let type = undefined;
+    const props = feature.properties;
+    let type = undefined;
 
-//     if ( STREET_CLASSES.includes( props.class ) ) type = "street";
-//     if ( RAIL_CLASSES.includes( props.class ) ) type = "railway";
-//     if ( [ "pedestrian" ].includes( props.class ) ) type = "path";
-//     if ( [ "track", "path" ].includes( props.class ) ) type = "path"; 
-
-//     if ( ! type ) {
-//         return;
-//     }
-
-//     if ( props.structure !== "none" ) {
-//         return;
-//     }
-
-//     const ROAD_WIDTHS = {
-//         "motorway": 24,
-//         "trunk": 22,
-//         "primary": 20,
-//         "secondary": 16,
-//         "tertiary": 12,
-//         "residential": 8,
-//         "service": 6,
-//         "unclassified": 8,
-//         "living_street": 6,
-//         "pedestrian": 4,
-//         "track": 4,
-//         "road": 8
-//     };      
-
-//     let width = $.config.widths.base;
-//     if ( props.lane_count ) width = props.lane_count * $.config.widths.propLane;
-//     else if ( props.type in ROAD_WIDTHS ) width = ROAD_WIDTHS[ props.type ];
+    if ( STREET_CLASSES.includes( props.class ) ) type = "street";
+    if ( RAIL_CLASSES.includes( props.class ) ) type = "railway";
+    if ( [ "pedestrian" ].includes( props.class ) ) type = "path";
+    if ( [ "track", "path" ].includes( props.class ) ) type = "path"; 
     
-//     const height = $.heights[ type ];
+    if ( ! type ) {
+        //  aerialway, service
+        return;
+    }
 
-//     //  TODO
+    if ( props.structure !== "none" ) {
+        //  bridge, tunnel
+        return;
+    }
+
+    const ROAD_WIDTHS = {
+        "motorway": 24,
+        "trunk": 22,
+        "primary": 20,
+        "secondary": 16,
+        "tertiary": 12,
+        "residential": 8,
+        "service": 6,
+        "unclassified": 8,
+        "living_street": 6,
+        "pedestrian": 4,
+        "track": 4,
+        "road": 8
+    };      
     
-// }
+    const height = $.heights[ type ];
+
+    if ( [ "Polygon", "MultiPolygon" ].includes( feature.geometry.type ) ) {
+
+        return;
+        const geom2 = GEOM2.fromGeoJSON( feature, $.center );
+        geom2.type = type;
+        geom2.height = height;
+        geom2map[ type ].push( geom2 );
+        return;
+
+    }    
+
+    let width = $.config.widths.base;
+    if ( props.lane_count ) width = props.lane_count * $.config.widths.propLane;
+    else if ( props.type in ROAD_WIDTHS ) width = ROAD_WIDTHS[ props.type ];
+
+    const path2s = PATH2.fromGeoJSON( feature, $.center );
+
+    path2s.forEach( path2 => {
+        path2.type = type;
+        path2.height = height;
+        path2.width = width;
+        path2map[ type ].push( path2 );
+    });
+
+}
 
 
 export { build };

@@ -1,15 +1,28 @@
 import { STATE as $ } from "./src/state.js";
 import { build } from "./src/build.js";
 import { initialize } from "./src/initialize.js";
-
-import {GPXLoader} from "@loaders.gl/kml";
-import {load} from "@loaders.gl/core";
+import { fetchHeightmapsForBounds } from "./src/heightmap.js";
+import * as THREE from "three";
 
 
 initialize();
-await build();
+// await build();
 
+const heightmaps = await fetchHeightmapsForBounds( $.worldOuterBounds, 14, import.meta.env.VITE_MAPBOX_ACCESS_TOKEN );
+const heights = heightmaps[ 0 ].data;
 
+const plane = new THREE.PlaneGeometry( 256, 256, 255, 255 );
+plane.rotateX( - Math.PI / 2 );
+const verts = plane.attributes.position.array;
+
+console.log( verts.length / 3, heights.length );
+
+for ( let i = 0; i < heights.length; i++ ) {
+    verts[ 3 * i + 1 ] = heights[ i ];
+}
+
+plane.computeVertexNormals();
+$.city.add( new THREE.Mesh( plane, new THREE.MeshStandardMaterial( { color: 0xffff00 } ) ));
 
 
 ////////////////////////////////////////////////////////////////////////////////

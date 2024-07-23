@@ -17,20 +17,12 @@
   "dependencies": {
     "@jscad/3mf-serializer": "^2.1.11",
     "@jscad/modeling": "^2.12.2",
+    "@loaders.gl/core": "^4.2.2",
+    "@loaders.gl/images": "^4.2.2",
     "@loaders.gl/kml": "^4.2.2",
+    "@mapbox/tilebelt": "^1.0.2",
     "@tweakpane/plugin-essentials": "^0.2.1",
-    "@velipso/polybool": "^1.0.0",
-    "csg2d": "^0.1.2",
-    "extrude-polyline": "^1.0.6",
-    "geometry-extrude": "^0.2.1",
-    "improved-greiner-hormann": "git+https://git@github.com/BadIdeaException/improved-greiner-hormann.git",
-    "martinez-polygon-clipping": "^0.7.3",
-    "osmtogeojson": "^3.0.0-beta.5",
-    "poly-extrude": "^0.3.0",
-    "polybooljs": "^1.2.2",
     "three": "^0.165.0",
-    "three-bvh-csg": "^0.0.16",
-    "three-csg-ts": "^3.2.0",
     "tweakpane": "^4.0.3"
   }
 }

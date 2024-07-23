@@ -2,6 +2,9 @@
   "name": "mvt",
   "module": "index.js",
   "type": "module",
+  "scripts": {
+    "dev": "bun run index.js"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },

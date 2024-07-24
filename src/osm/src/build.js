@@ -8,7 +8,7 @@ import * as jscad from "@jscad/modeling";
 import * as THREE from "three";
 
 const CLIP = true;
-const MERGE = true;
+const MERGE = false;
 const TYPES = [
     "buildings",
     "water",
@@ -139,24 +139,22 @@ async function build() {
         // });
 
         const exps = path2s.map( path2 => Object.assign( {}, 
-            jscad.expansions.expand( { delta: path2.width, corners: "edge", segments: 16 }, path2 ), 
+            jscad.expansions.expand( { delta: path2.width, corners: "round", segments: 16 }, path2 ), 
             { type, height: path2.height } 
         ));
 
-        console.log( exps );
-        exps.forEach( geom2 => {
-            const points = jscad.geometries.geom2.toPoints( geom2 ).map( p => new THREE.Vector2( p[0], p[1] ) );
-            const geom = new THREE.BufferGeometry().setFromPoints( points );
-            geom.rotateX( -Math.PI / 2 );
-            geom.translate( 0, 1, 0 );
-            const mesh = new THREE.Line( 
-                geom,
-                new THREE.LineBasicMaterial( { color: 0xff0000 } )
-            );
-            $.city.add( mesh );
-        });
+        // exps.forEach( geom2 => {
+        //     const points = jscad.geometries.geom2.toPoints( geom2 ).map( p => new THREE.Vector2( p[0], p[1] ) );
+        //     const geom = new THREE.BufferGeometry().setFromPoints( [ ...points, points[0] ] );
+        //     geom.rotateX( -Math.PI / 2 );
+        //     geom.translate( 0, 1, 0 );
+        //     const mesh = new THREE.Line( 
+        //         geom,
+        //         new THREE.LineBasicMaterial( { color: 0xff0000 } )
+        //     );
+        //     $.city.add( mesh );
+        // });
         
-
         geom2map[ type ].push( ...exps );
 
     }
@@ -199,7 +197,7 @@ async function build() {
         const geom3s = sizeable.map( geom2 => {
             return GEOM3.extrude( geom2, geom2.height ) 
         });
-        // geom3map[ type ].push( ...geom3s );
+        geom3map[ type ].push( ...geom3s );
         
     }
     
@@ -313,6 +311,7 @@ function appendWater( feature ) {
 
 }
 
+let footways = 0;
 
 function appendRoad( feature ) {
     
@@ -349,37 +348,75 @@ function appendRoad( feature ) {
         return;
     }
 
-    const ROAD_WIDTHS = {
-        "motorway": 24,
-        "trunk": 22,
-        "primary": 20,
-        "secondary": 16,
-        "tertiary": 12,
-        "residential": 8,
-        "service": 6,
-        "unclassified": 8,
-        "living_street": 6,
-        "pedestrian": 4,
-        "track": 4,
-        "road": 8
+    const CLASS_WIDTHS = {
+        motorway: 25,
+        motorway_link: 15,
+        trunk: 20,
+        trunk_link: 10,
+        primary: 15,
+        primary_link: 10,
+        secondary: 12,
+        secondary_link: 8,
+        tertiary: 10,
+        tertiary_link: 8,
+        street: 9,
+        street_limited: 7,
+        pedestrian: 4,
+        construction: 5,
+        track: 3,
+        service: 4,
+        ferry: 20,
+        path: 1.8,
+        major_rail: 4,
+        minor_rail: 3,
+        service_rail: 2.5,
+        aerialway: 2,
+        golf: 1,
+        junction: 5,
+        roundabout: 10,
+        mini_roundabout: 5,
+        turning_circle: 12,
+        turning_loop: 10,
+        traffic_signals: 1,
+        level_crossing: 1,
+        intersection: 5,
     };      
+
+    const TYPE_WIDTHS = {
+        steps: 1.5,
+        corridor: 2.5,
+        sidewalk: 1.8,
+        crossing: 2,
+        piste: 4,
+        mountain_bike: 1.5,
+        hiking: 1,
+        trail: 1.2,
+        cycleway: 2,
+        footway: 1.5,
+        path: 1.8,
+        bridleway: 2.5,
+    };
     
     const height = $.heights[ type ];
 
     if ( [ "Polygon", "MultiPolygon" ].includes( feature.geometry.type ) ) {
-
-        return;
         const geom2 = GEOM2.fromGeoJSON( feature, $.center );
         geom2.type = type;
         geom2.height = height;
         geom2map[ type ].push( geom2 );
         return;
-
     }    
+
+    // footways += 1;
+    // if ( footways !== 30 ) return;
+
+    // feature.geometry.coordinates = feature.geometry.coordinates.slice( 41, 42 );
+    // console.log( feature );
 
     let width = $.config.widths.base;
     if ( props.lane_count ) width = props.lane_count * $.config.widths.propLane;
-    else if ( props.type in ROAD_WIDTHS ) width = ROAD_WIDTHS[ props.type ];
+    else if ( props.type in TYPE_WIDTHS ) width = TYPE_WIDTHS[ props.type ];
+    else if ( props.class in CLASS_WIDTHS ) width = CLASS_WIDTHS[ props.class ];
 
     const path2s = PATH2.fromGeoJSON( feature, $.center );
 

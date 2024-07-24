@@ -1,8 +1,8 @@
 import tilebelt from "@mapbox/tilebelt";
 
 import "@loaders.gl/polyfills";
-import { parse } from '@loaders.gl/core';
-import { ImageLoader } from '@loaders.gl/images';
+import { parse, encode } from '@loaders.gl/core';
+import { ImageLoader, ImageWriter } from '@loaders.gl/images';
 
 import fs from "fs";
 
@@ -50,8 +50,8 @@ export async function fetchTile( urlTemplate, index, accessToken ) {
 
 export async function fetchRasterTilesForBounds( bbox, zoom, accessToken ) {
     
-    // const URL_TEMPLATE = "https://api.mapbox.com/v4/mapbox.terrain-rgb/{z}/{x}/{y}.png";
-    const URL_TEMPLATE = "https://api.mapbox.com/v4/mapbox.mapbox-terrain-dem-v1/{z}/{x}/{y}.png";
+    // const URL_TEMPLATE = "https://api.mapbox.com/v4/mapbox.terrain-rgb/{z}/{x}/{y}.pngraw";
+    const URL_TEMPLATE = "https://api.mapbox.com/v4/mapbox.mapbox-terrain-dem-v1/{z}/{x}/{y}.pngraw";
 
     const indices = tileIndicesForBounds( bbox, zoom );
     let count = indices.length;
@@ -74,7 +74,7 @@ export async function fetchRasterTilesForBounds( bbox, zoom, accessToken ) {
 
 export async function rgbTileToHeightmap( tile ) {
 
-    const image = await parse( tile.buffer, ImageLoader, { image: { type: "data" } } )
+    const image = await parse( tile.buffer, ImageLoader, { image: { type: "data" } } );
     const count = image.width * image.height;
     const index = tile.index;
     const bbox = tilebelt.tileToBBOX( [ index.x, index.y, index.z ] );
@@ -116,15 +116,50 @@ export async function fetchHeightmapsForBounds( bbox, zoom, accessToken ) {
 const bbox = { ymin: 47.47749, xmin: 19.0287947, ymax: 47.52146, xmax: 19.0854007 };
 // const bbox = { ymin: 47.5089, xmin: 19.0722, ymax: 47.5190, xmax: 19.0867 };
 // const bbox = { xmin: 11.747047, ymin: 47.633330, xmax: 11.886271, ymax: 47.724868 }; //  alps
-const zoom = 14;
+const zoom = 11;
 const token = process.env.VITE_MAPBOX_ACCESS_TOKEN;
 
-console.log( token )
+const heightmaps = await fetchHeightmapsForBounds( bbox, zoom, token );
 
-// fetchHeightmapForBounds( bbox, zoom, token );
-const tiles = await fetchRasterTilesForBounds( bbox, zoom, token );
+// const tiles = await fetchRasterTilesForBounds( bbox, zoom, token );
 
-tiles.forEach( tile => {
-    const buffer = Buffer.from( tile.buffer );
-    fs.writeFileSync( `data/hom-dem-${tile.index.z}-${tile.index.x}-${tile.index.y}.png`, buffer );
-});
+// tiles.forEach( tile => {
+//     const buffer = Buffer.from( tile.buffer );
+//     fs.writeFileSync( `data/hom-dem-${tile.index.z}-${tile.index.x}-${tile.index.y}.png`, buffer );
+// });
+
+for ( const heightmap of heightmaps.slice( 1, 2 ) ) {
+    
+    const heights = heightmap.data;
+    const min = Math.min( ...heights );
+    const max = Math.max( ...heights );
+
+    console.log( heights );
+
+    const data = heights.map( h => {
+        const t = Math.round( 255 * ( h - min ) / ( max - min ) );
+        return t;
+    });
+
+    let rgba = new Uint8Array( heights.length * 4 );
+
+    data.forEach( ( v, index ) => {
+        rgba[ index * 4 + 0 ] = v; 
+        rgba[ index * 4 + 1 ] = v; 
+        rgba[ index * 4 + 2 ] = v; 
+        rgba[ index * 4 + 3 ] = 255; 
+    });
+
+    const image = {
+        data: rgba,
+        shape: [ 256, 256, 4 ],
+        width: 256,
+        height: 256,
+        components: 4,
+        layers: [ 1 ]
+    };
+
+    const buffer = await encode( image, ImageWriter, { image: {mimeType: 'image/png' } } );
+    fs.writeFileSync( `data/hom-heights-${heightmap.index.z}-${heightmap.index.x}-${heightmap.index.y}-raw.png`, buffer );
+
+}

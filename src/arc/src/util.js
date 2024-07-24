@@ -23,11 +23,13 @@ export function gpsToEnu( refPoint, targetPoint ) {
         north = -north;
     }
 
-    const up = targetPoint.altitude - refPoint.altitude;
-    const res = targetPoint;
-    res.x = east;
-    res.y = north;
-    res.z = up;
+    const up = ( targetPoint.altitude - refPoint.altitude ) | 0;
+    const res = {
+        x: east,
+        y: north,
+        z: up,
+    };
+    
     return res;
 }
 

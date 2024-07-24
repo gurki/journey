@@ -1,6 +1,9 @@
 import tilebelt from "@mapbox/tilebelt";
-import { load, parse } from '@loaders.gl/core';
+import { parse } from '@loaders.gl/core';
 import { ImageLoader } from '@loaders.gl/images';
+
+
+const URL_TEMPLATE = "https://api.mapbox.com/v4/mapbox.mapbox-terrain-dem-v1/{z}/{x}/{y}.pngraw";
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -58,8 +61,8 @@ export async function fetchTilesForBounds( bbox, zoom, urlTemplate, accessToken 
 
     console.log( `⌛ fetching ${count} tiles …` );
     
-    const tiles = await Promise.all( indices.map( async ( index ) => {
-        console.log( `📥 fetching tile ${JSON.stringify(Object.values(index))} …` );
+    const tiles = await Promise.all( indices.map( async ( index, id ) => {
+        console.log( `📥 fetching tile ${JSON.stringify(Object.values(index))} (${id+1}/${count})…` );
         return fetchTile( urlTemplate, index, accessToken );
     }));
 
@@ -97,14 +100,9 @@ export async function rgbTileToHeightmap( tile ) {
 
 
 ////////////////////////////////////////////////////////////////////////////////
+//  [1] https://docs.mapbox.com/data/tilesets/reference/mapbox-terrain-dem-v1
 export async function fetchHeightmapsForBounds( bbox, zoom, token ) {
-
-    //  [1] https://docs.mapbox.com/data/tilesets/reference/mapbox-terrain-dem-v1
-    // const URL_TEMPLATE = "https://api.mapbox.com/v4/mapbox.terrain-rgb/{z}/{x}/{y}.png";
-    const URL_TEMPLATE = "https://api.mapbox.com/v4/mapbox.mapbox-terrain-dem-v1/{z}/{x}/{y}.png";
-
     const tiles = await fetchTilesForBounds( bbox, zoom, URL_TEMPLATE, token );
     const heightmaps = await Promise.all( tiles.map( ( tile ) => rgbTileToHeightmap( tile ) ));
     return heightmaps;
-
 }

@@ -34,16 +34,16 @@ TYPES.forEach( type => {
 
 async function fetchData() {
 
-    const ACCESS_TOKEN = 'pk.eyJ1IjoidGd1cmRhbiIsImEiOiJjbHhqODE5MnIxaHpxMmlzM2VjbWthMGdxIn0.1Pix25iPyLlNetjOtghK1w';
-    const URL_TEMPLATE = 'https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/{z}/{x}/{y}.vector.pbf';
-    const zoom = 15;
-    const data = await fetchTilesForBounds( $.worldOuterBounds, zoom, URL_TEMPLATE, ACCESS_TOKEN );
-    $.data = data.flat();
+    // const ACCESS_TOKEN = 'pk.eyJ1IjoidGd1cmRhbiIsImEiOiJjbHhqODE5MnIxaHpxMmlzM2VjbWthMGdxIn0.1Pix25iPyLlNetjOtghK1w';
+    // const URL_TEMPLATE = 'https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/{z}/{x}/{y}.vector.pbf';
+    // const zoom = 15;
+    // const data = await fetchTilesForBounds( $.worldOuterBounds, zoom, URL_TEMPLATE, ACCESS_TOKEN );
+    // $.data = data.flat();
     
-    // console.log( `⌛ fetching data …` );
-    // const response = await fetch( "./results/hom-mvt-15.geojson" );
-    // const tiles = await response.json();
-    // $.data = tiles.flat();
+    console.log( `⌛ fetching data …` );
+    const response = await fetch( "./results/hom-mvt-15.geojson" );
+    const tiles = await response.json();
+    $.data = tiles.flat();
 
 }
 
@@ -98,11 +98,11 @@ async function build() {
 
         switch ( name ) {
             case "building": appendBuilding( feature, clip2 ); break;
-            case "water": appendWater( feature, clip2 ); break;
-            case "road": appendRoad( feature, clip2 ); break;
-            case "landuse":
-            case "structure":   //  hedge
-            case "landuse_overlay": appendLanduse( feature, clip2 ); break;
+            // case "water": appendWater( feature, clip2 ); break;
+            // case "road": appendRoad( feature, clip2 ); break;
+            // case "landuse":
+            // case "structure":   //  hedge
+            // case "landuse_overlay": appendLanduse( feature, clip2 ); break;
             default: return;
         }
 
@@ -126,6 +126,9 @@ async function build() {
             continue;
         }
 
+        path2s.forEach( path2 => jscad.geometries.path2.validate( path2 ) );
+
+        //  debug path2s
         // path2s.forEach( path2 => {
         //     const points = path2.points.map( p => new THREE.Vector2( p[0], p[1] ) );
         //     const geom = new THREE.BufferGeometry().setFromPoints( points );
@@ -138,24 +141,12 @@ async function build() {
         //     $.city.add( mesh );
         // });
 
-        const exps = path2s.map( path2 => Object.assign( {}, 
+        const geom2s = path2s.map( path2 => Object.assign( {}, 
             jscad.expansions.expand( { delta: path2.width, corners: "round", segments: 16 }, path2 ), 
             { type, height: path2.height } 
         ));
 
-        // exps.forEach( geom2 => {
-        //     const points = jscad.geometries.geom2.toPoints( geom2 ).map( p => new THREE.Vector2( p[0], p[1] ) );
-        //     const geom = new THREE.BufferGeometry().setFromPoints( [ ...points, points[0] ] );
-        //     geom.rotateX( -Math.PI / 2 );
-        //     geom.translate( 0, 1, 0 );
-        //     const mesh = new THREE.Line( 
-        //         geom,
-        //         new THREE.LineBasicMaterial( { color: 0xff0000 } )
-        //     );
-        //     $.city.add( mesh );
-        // });
-        
-        geom2map[ type ].push( ...exps );
+        geom2map[ type ].push( ...geom2s );
 
     }
 
@@ -175,27 +166,48 @@ async function build() {
             continue;
         }
 
+        geom2s.forEach( geom2 => jscad.geometries.geom2.validate( geom2 ) );
+        
+        //  debug geom2s
+        // geom2s.forEach( geom2 => {
+        //     const points = jscad.geometries.geom2.toPoints( geom2 ).map( p => new THREE.Vector2( p[0], p[1] ) );
+        //     const geom = new THREE.BufferGeometry().setFromPoints( [ ...points, points[0] ] );
+        //     geom.rotateX( -Math.PI / 2 );
+        //     geom.translate( 0, 1, 0 );
+        //     const mesh = new THREE.Line( 
+        //         geom,
+        //         new THREE.LineBasicMaterial( { color: 0xff0000 } )
+        //     );
+        //     $.city.add( mesh );
+        // });
+
         const allClipped = CLIP ? geom2s.map( geom2 => Object.assign( {}, 
             jscad.booleans.intersect( geom2, clip2 ), 
             { type, height: geom2.height } 
         )) : geom2s;
         
-        const clipped = allClipped.filter( geom2 => geom2.sides.length > 0 );
+        const clipped = allClipped.filter( geom2 => geom2.sides.length > 2 );
 
         if ( clipped.length === 0 ) {
             continue;
         }
 
-        const sizeable = clipped.filter( geom2 => {
+        const pruned = clipped.filter( geom2 => {
             const radius = jscad.measurements.measureBoundingSphere( geom2 )[ 1 ];
             const minDimMm = 1000 * radius / $.config.printScale;
             return minDimMm > 1 * $.config.layerHeightMm;
         });
 
-        console.log( `pruned ${clipped.length - sizeable.length} ${type}` );
+        console.log( `pruned ${clipped.length - pruned.length} ${type}` );
 
-        const geom3s = sizeable.map( geom2 => {
-            return GEOM3.extrude( geom2, geom2.height ) 
+        const geom3s = pruned.map( geom2 => {
+            const geom3 = GEOM3.extrude( geom2, geom2.height ) 
+            try {
+                jscad.geometries.geom3.validate( geom3 ) 
+            } catch ( err ) {
+                console.warn( type, err, geom2 );
+            }
+            return geom3;
         });
 
         geom3map[ type ].push( ...geom3s );
@@ -212,12 +224,24 @@ async function build() {
 
     for ( const type of TYPES ) {
     
-        const geom3s = geom3map[ type ];
-
+        let geom3s = geom3map[ type ];       
+        
         if ( geom3s.length === 0 ) {
             continue;
         }
+        
+        let goods = [];
+        geom3s.forEach( geom3 => {
+            try {
+                jscad.geometries.geom3.validate( geom3 ) 
+            } catch ( err ) {
+                console.warn( type, err, geom3 );
+                goods.push( geom3 );
+            }
+        });
 
+        geom3s = goods;
+        
         const shouldMerge = ( type !== "buildings" ) && MERGE;
         const maybeMerged = shouldMerge ? [ GEOM3.mergeAll( geom3s ) ] : geom3s;
 
@@ -312,7 +336,6 @@ function appendWater( feature ) {
 
 }
 
-let footways = 0;
 
 function appendRoad( feature ) {
     
@@ -407,13 +430,6 @@ function appendRoad( feature ) {
         geom2map[ type ].push( geom2 );
         return;
     }    
-
-    // footways += 1;
-    // if ( footways !== 30 ) return;
-
-    // feature.geometry.coordinates = feature.geometry.coordinates.slice( 41, 42 );
-    
-    if ( props.lane_count ) console.log( feature );
 
     let width = $.config.widths.base;
     if ( props.lane_count ) width = props.lane_count * $.config.widths.propLane;

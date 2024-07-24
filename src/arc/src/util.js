@@ -29,12 +29,12 @@ export function gpsToEnu( refPoint, targetPoint ) {
         y: north,
         z: up,
     };
-    
+
     return res;
 }
 
 
-export function gpsArrToEnu( refPoint, targetPoint ) {
+export function lla2enu( refPoint, targetPoint ) {
 
     const lon = targetPoint[0];
     const lat = targetPoint[1];
@@ -62,6 +62,36 @@ export function gpsArrToEnu( refPoint, targetPoint ) {
 
     const altitude = ( alt - refPoint.altitude ) | alt | 0;
     return [ east, north, altitude ];
+    
+}
+
+
+export function ll2en( refPoint, targetPoint ) {
+
+    const lon = targetPoint[0];
+    const lat = targetPoint[1];
+
+    let east = geolib.getDistance(
+        { latitude: refPoint.latitude, longitude: refPoint.longitude },
+        { latitude: refPoint.latitude, longitude: lon },
+        0.001
+    );
+    
+    if ( lon < refPoint.longitude ) {
+        east = -east;
+    } 
+
+    let north = geolib.getDistance(
+        { latitude: refPoint.latitude, longitude: refPoint.longitude },
+        { latitude: lat, longitude: refPoint.longitude },
+        0.001
+    );
+
+    if ( lat < refPoint.latitude ) {
+        north = -north;
+    }
+
+    return [ east, north ];
     
 }
 

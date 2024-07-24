@@ -12,5 +12,5 @@ export function toLocalPolygon( polygon, gpsOrigin ) {
 
 
 export function toLocalLineString( lineString, gpsOrigin ) {
-    return lineString.map( coord => util.gpsArrToEnu( gpsOrigin, coord ) );
+    return lineString.map( coord => util.ll2en( gpsOrigin, coord ) );
 }

@@ -29,6 +29,12 @@
 ### terrain
 - https://developers.google.com/maps/documentation/elevation/start#maps_http_elevation_locations-sh
 - https://www.earthdata.nasa.gov/topics/land-surface/topography/terrain-elevation/digital-elevation-terrain-model-dem
+- https://blog.mapbox.com/bringing-3d-terrain-to-the-browser-with-three-js-410068138357
+- https://blog.mapbox.com/taking-our-maps-to-the-next-dimension-dbeee37a7c4c
+- https://observablehq.com/@mourner/martin-real-time-rtin-terrain-mesh
+- https://github.com/mapbox/martini
+- https://blog.mapbox.com/global-elevation-data-6689f1d0ba65
+- https://www.esri.com/arcgis-blog/products/product/imagery/hypsometric-tinting/
 
 ### arc
 - https://github.com/sobri909/LocoKit/blob/master/TimelineItemDescription.md

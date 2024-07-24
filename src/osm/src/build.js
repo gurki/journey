@@ -97,12 +97,12 @@ async function build() {
         const name = props.layerName;
 
         switch ( name ) {
-            // case "building": appendBuilding( feature, clip2 ); break;
-            // case "water": appendWater( feature, clip2 ); break;
+            case "building": appendBuilding( feature, clip2 ); break;
+            case "water": appendWater( feature, clip2 ); break;
             case "road": appendRoad( feature, clip2 ); break;
-            // case "landuse":
-            // case "structure":   //  hedge
-            // case "landuse_overlay": appendLanduse( feature, clip2 ); break;
+            case "landuse":
+            case "structure":   //  hedge
+            case "landuse_overlay": appendLanduse( feature, clip2 ); break;
             default: return;
         }
 
@@ -411,7 +411,8 @@ function appendRoad( feature ) {
     // if ( footways !== 30 ) return;
 
     // feature.geometry.coordinates = feature.geometry.coordinates.slice( 41, 42 );
-    // console.log( feature );
+    
+    if ( props.lane_count ) console.log( feature );
 
     let width = $.config.widths.base;
     if ( props.lane_count ) width = props.lane_count * $.config.widths.propLane;
@@ -423,7 +424,7 @@ function appendRoad( feature ) {
     path2s.forEach( path2 => {
         path2.type = type;
         path2.height = height;
-        path2.width = width;
+        path2.width = width / 2;
         path2map[ type ].push( path2 );
     });
 

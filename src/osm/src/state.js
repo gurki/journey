@@ -41,17 +41,17 @@ export const STATE = {
             water: "#0ff",      //  lakes, rivers, oceans
         },
         heights: {  //  [printLayers] if not stated otherwise
-            ground: 2,
+            ground: 6,
             buildings: null,    //  unused
-            parks: 1,
-            greenery: 2,
-            railway: 2,     
-            stone: 3,
-            water: 2,
-            street: 2,
-            pedestrian: 3,
-            path: 3,
-            unknown: 6,
+            parks: 2,
+            greenery: 4,
+            railway: 4,     
+            stone: 6,
+            water: 4,
+            street: 4,
+            pedestrian: 6,
+            path: 6,
+            unknown: 12,
         },
         heightOffsets: { 
             buildings: 0,
@@ -67,10 +67,10 @@ export const STATE = {
             water: 0,
         },
         widths: {           //  [m]
-            base: 4,        //  fallback, e.g. neither lanes nor width
+            base: 2,        //  fallback, e.g. neither lanes nor width
             propWidth: 1,
-            propLane: 5, 
-            railway: 3,
+            propLane: 3.5, 
+            railway: 4,
         },
         defaults: {
             lanes: 1,

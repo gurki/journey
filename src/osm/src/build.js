@@ -34,16 +34,16 @@ TYPES.forEach( type => {
 
 async function fetchData() {
 
-    // const ACCESS_TOKEN = 'pk.eyJ1IjoidGd1cmRhbiIsImEiOiJjbHhqODE5MnIxaHpxMmlzM2VjbWthMGdxIn0.1Pix25iPyLlNetjOtghK1w';
-    // const URL_TEMPLATE = 'https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/{z}/{x}/{y}.vector.pbf';
-    // const zoom = 15;
-    // const data = await fetchTilesForBounds( $.worldOuterBounds, zoom, URL_TEMPLATE, ACCESS_TOKEN );
-    // $.data = data.flat();
-
-    console.log( `⌛ fetching data …` );
-    const response = await fetch( "./results/hom-mvt-15.geojson" );
-    const tiles = await response.json();
-    $.data = tiles.flat();
+    const ACCESS_TOKEN = 'pk.eyJ1IjoidGd1cmRhbiIsImEiOiJjbHhqODE5MnIxaHpxMmlzM2VjbWthMGdxIn0.1Pix25iPyLlNetjOtghK1w';
+    const URL_TEMPLATE = 'https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/{z}/{x}/{y}.vector.pbf';
+    const zoom = 15;
+    const data = await fetchTilesForBounds( $.worldOuterBounds, zoom, URL_TEMPLATE, ACCESS_TOKEN );
+    $.data = data.flat();
+    
+    // console.log( `⌛ fetching data …` );
+    // const response = await fetch( "./results/hom-mvt-15.geojson" );
+    // const tiles = await response.json();
+    // $.data = tiles.flat();
 
 }
 
@@ -187,16 +187,17 @@ async function build() {
         }
 
         const sizeable = clipped.filter( geom2 => {
-            // const dims = jscad.measurements.measureDimensions( geom2 );
-            // return dims[0] > 2 || dims[1] > 2;
-            return true;
+            const radius = jscad.measurements.measureBoundingSphere( geom2 )[ 1 ];
+            const minDimMm = 1000 * radius / $.config.printScale;
+            return minDimMm > 1 * $.config.layerHeightMm;
         });
 
-        // console.log( geom2s.length - sizeable.length );
+        console.log( `pruned ${clipped.length - sizeable.length} ${type}` );
 
         const geom3s = sizeable.map( geom2 => {
             return GEOM3.extrude( geom2, geom2.height ) 
         });
+
         geom3map[ type ].push( ...geom3s );
         
     }

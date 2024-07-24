@@ -35,8 +35,8 @@ function computeDerived() {
     }
 
     $.worldTileSize = {
-        width: $.config.scale * $.config.tileSize.width,
-        height: $.config.scale * $.config.tileSize.height
+        width: $.config.printScale * $.config.tileSize.width,
+        height: $.config.printScale * $.config.tileSize.height
     };
     const tx = Math.ceil( w / $.worldTileSize.width );
     const ty = Math.ceil( h / $.worldTileSize.height );
@@ -62,10 +62,10 @@ function computeDerived() {
         ymax: wotr.latitude, xmax: wotr.longitude
     };
 
-    $.worldLayerHeight = $.config.layerHeightMm * $.config.scale / 1000;
+    $.worldLayerHeight = $.config.layerHeightMm * $.config.printScale / 1000;
     
     for ( const type of Object.keys( $.config.heights ) ) {
-        $.heights[ type ] = $.config.scale * $.config.heights[ type ] * $.config.layerHeightMm / 1000;
+        $.heights[ type ] = $.config.printScale * $.config.heights[ type ] * $.config.layerHeightMm / 1000;
         $.polygons[ type ] = [];
     }
 
@@ -121,7 +121,7 @@ function initScene() {
 
     $.scene.add( $.city );
 
-    const s = $.config.renderScale / $.config.scale;
+    const s = $.config.renderScale / $.config.printScale;
     $.scene.scale.set( s, s, s );
 
 }

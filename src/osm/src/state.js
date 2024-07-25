@@ -41,7 +41,7 @@ export const STATE = {
             water: "#0ff",      //  lakes, rivers, oceans
         },
         heights: {  //  [printLayers] if not stated otherwise
-            buildings: null,    //  unused
+            buildings: 15,  //  meters
             greenery: 4,
             ground: 4,
             parks: 2,

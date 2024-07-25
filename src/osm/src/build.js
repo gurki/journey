@@ -9,6 +9,10 @@ import * as THREE from "three";
 
 const CLIP = true;
 const MERGE = false;
+const FORCE_MIN_WIDTH = true;
+const PRUNE_SMALL_ELEMENTS = true;
+const VALIDATE = false;
+
 const TYPES = [
     "buildings",
     "water",
@@ -193,23 +197,17 @@ async function build() {
         }
 
         const pruned = clipped.filter( geom2 => {
+            if ( ! PRUNE_SMALL_ELEMENTS ) return true;
             const radius = jscad.measurements.measureBoundingSphere( geom2 )[ 1 ];
             const minDimMm = 1000 * radius / $.config.printScale;
             return minDimMm > 1 * $.config.layerHeightMm;
         });
 
-        console.log( `pruned ${clipped.length - pruned.length} ${type}` );
+        if ( PRUNE_SMALL_ELEMENTS ) {
+            console.log( `pruned ${clipped.length - pruned.length} ${type}` );
+        }
 
-        const geom3s = pruned.map( geom2 => {
-            const geom3 = GEOM3.extrude( geom2, geom2.height ) 
-            try {
-                jscad.geometries.geom3.validate( geom3 ) 
-            } catch ( err ) {
-                console.warn( type, err, geom2 );
-            }
-            return geom3;
-        });
-
+        const geom3s = pruned.map( geom2 => GEOM3.extrude( geom2, geom2.height ) );
         geom3map[ type ].push( ...geom3s );
         
     }
@@ -230,18 +228,17 @@ async function build() {
             continue;
         }
         
-        // let goods = [];
-        geom3s.forEach( geom3 => {
-            try {
-                jscad.geometries.geom3.validate( geom3 ) 
-            } catch ( err ) {
-                console.warn( type, err, geom3 );
-                // goods.push( geom3 );
-            }
-        });
+        if ( VALIDATE ) {
+            geom3s.forEach( geom3 => {
+                try {
+                    jscad.geometries.geom3.validate( geom3 ) 
+                } catch ( err ) {
+                    // console.warn( type, err, geom3 );
+                    // goods.push( geom3 );
+                }
+            });
+        }
 
-        // geom3s = goods;
-        
         const shouldMerge = ( type !== "buildings" ) && MERGE;
         const maybeMerged = shouldMerge ? [ GEOM3.mergeAll( geom3s ) ] : geom3s;
 
@@ -314,8 +311,11 @@ function appendBuilding( feature ) {
     if ( feature.properties.extrude === "false" ) return;
 
     const type = "buildings";
-    const height = feature.properties.height | $.config.defaults.levels;
     
+    const minHeight = 5;
+    let height = feature.properties.height; // ? feature.properties.height : $.heights.buildings;
+    if ( height <= minHeight ) height = $.heights.buildings;
+
     const geom2 = GEOM2.fromGeoJSON( feature, $.center );
     geom2.type = type;
     geom2.height = height;
@@ -359,13 +359,23 @@ function appendRoad( feature ) {
 
     if ( STREET_CLASSES.includes( props.class ) ) type = "street";
     if ( RAIL_CLASSES.includes( props.class ) ) type = "railway";
-    if ( [ "pedestrian" ].includes( props.class ) ) type = "path";
+    if ( [ "pedestrian", "service" ].includes( props.class ) ) type = "path";
     if ( [ "track", "path" ].includes( props.class ) ) type = "path"; 
     
     if ( ! type ) {
-        //  aerialway, service
+        //  aerialway
         return;
     }
+
+    if ( [ "service:drive_through", "service:driveway", "service:parking_aisle", "service:parking" ].includes( props.type ) ) {
+        return;
+    }
+
+    if ( [ "unclassified", "disused", "abandoned" ].includes( props.type ) ) {
+    // if ( [ "crossing", "unclassified", "steps", "subway", "disused", "abandoned", "corridor" ].includes( props.type ) ) {
+        return;
+    }
+    console.log( props.type );
 
     if ( props.structure !== "none" ) {
         //  bridge, tunnel
@@ -375,14 +385,14 @@ function appendRoad( feature ) {
     const CLASS_WIDTHS = {
         motorway: 25,
         motorway_link: 15,
-        trunk: 20,
+        trunk: 15,
         trunk_link: 10,
         primary: 15,
-        primary_link: 10,
-        secondary: 12,
+        primary_link: 12,
+        secondary: 10,
         secondary_link: 8,
-        tertiary: 10,
-        tertiary_link: 8,
+        tertiary: 8,
+        tertiary_link: 6,
         street: 9,
         street_limited: 7,
         pedestrian: 4,
@@ -431,8 +441,7 @@ function appendRoad( feature ) {
         return;
     }    
 
-    const minWidth = 0.6 * $.config.printScale / 1000;
-    console.log( minWidth );
+    const minWidth = FORCE_MIN_WIDTH ? 0.6 * $.config.printScale / 1000 : 0;
 
     let width = $.config.widths.base;
     if ( props.lane_count ) width = props.lane_count * $.config.widths.propLane;

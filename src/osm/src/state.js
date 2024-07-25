@@ -43,7 +43,7 @@ export const STATE = {
         heights: {  //  [printLayers] if not stated otherwise
             buildings: 15,  //  meters
             greenery: 4,
-            ground: 4,
+            ground: 3,
             parks: 2,
             path: 6,
             pedestrian: 6,

@@ -375,7 +375,6 @@ function appendRoad( feature ) {
     // if ( [ "crossing", "unclassified", "steps", "subway", "disused", "abandoned", "corridor" ].includes( props.type ) ) {
         return;
     }
-    console.log( props.type );
 
     if ( props.structure !== "none" ) {
         //  bridge, tunnel

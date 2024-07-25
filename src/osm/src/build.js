@@ -98,11 +98,11 @@ async function build() {
 
         switch ( name ) {
             case "building": appendBuilding( feature, clip2 ); break;
-            // case "water": appendWater( feature, clip2 ); break;
-            // case "road": appendRoad( feature, clip2 ); break;
-            // case "landuse":
-            // case "structure":   //  hedge
-            // case "landuse_overlay": appendLanduse( feature, clip2 ); break;
+            case "water": appendWater( feature, clip2 ); break;
+            case "road": appendRoad( feature, clip2 ); break;
+            case "landuse":
+            case "structure":   //  hedge
+            case "landuse_overlay": appendLanduse( feature, clip2 ); break;
             default: return;
         }
 
@@ -230,17 +230,17 @@ async function build() {
             continue;
         }
         
-        let goods = [];
+        // let goods = [];
         geom3s.forEach( geom3 => {
             try {
                 jscad.geometries.geom3.validate( geom3 ) 
             } catch ( err ) {
                 console.warn( type, err, geom3 );
-                goods.push( geom3 );
+                // goods.push( geom3 );
             }
         });
 
-        geom3s = goods;
+        // geom3s = goods;
         
         const shouldMerge = ( type !== "buildings" ) && MERGE;
         const maybeMerged = shouldMerge ? [ GEOM3.mergeAll( geom3s ) ] : geom3s;
@@ -431,10 +431,13 @@ function appendRoad( feature ) {
         return;
     }    
 
+    const minWidth = 0.6 * $.config.printScale / 1000;
+    console.log( minWidth );
+
     let width = $.config.widths.base;
     if ( props.lane_count ) width = props.lane_count * $.config.widths.propLane;
-    else if ( props.type in TYPE_WIDTHS ) width = TYPE_WIDTHS[ props.type ];
-    else if ( props.class in CLASS_WIDTHS ) width = CLASS_WIDTHS[ props.class ];
+    else if ( props.type in TYPE_WIDTHS ) width = Math.max( TYPE_WIDTHS[ props.type ], minWidth );
+    else if ( props.class in CLASS_WIDTHS ) width = Math.max( CLASS_WIDTHS[ props.class ], minWidth );
 
     const path2s = PATH2.fromGeoJSON( feature, $.center );
 

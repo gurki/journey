@@ -41,16 +41,16 @@ export const STATE = {
             water: "#0ff",      //  lakes, rivers, oceans
         },
         heights: {  //  [printLayers] if not stated otherwise
-            ground: 6,
             buildings: null,    //  unused
-            parks: 2,
             greenery: 4,
+            ground: 4,
+            parks: 2,
+            path: 6,
+            pedestrian: 6,
             railway: 4,     
             stone: 6,
-            water: 4,
             street: 4,
-            pedestrian: 6,
-            path: 6,
+            water: 4,
             unknown: 12,
         },
         heightOffsets: { 

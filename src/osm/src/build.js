@@ -38,24 +38,26 @@ TYPES.forEach( type => {
 
 async function fetchData() {
 
-    // const ACCESS_TOKEN = 'pk.eyJ1IjoidGd1cmRhbiIsImEiOiJjbHhqODE5MnIxaHpxMmlzM2VjbWthMGdxIn0.1Pix25iPyLlNetjOtghK1w';
-    // const URL_TEMPLATE = 'https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/{z}/{x}/{y}.vector.pbf';
-    // const zoom = 15;
-    // const data = await fetchTilesForBounds( $.worldOuterBounds, zoom, URL_TEMPLATE, ACCESS_TOKEN );
-    // $.data = data.flat();
+    const ACCESS_TOKEN = 'pk.eyJ1IjoidGd1cmRhbiIsImEiOiJjbHhqODE5MnIxaHpxMmlzM2VjbWthMGdxIn0.1Pix25iPyLlNetjOtghK1w';
+    const URL_TEMPLATE = 'https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/{z}/{x}/{y}.vector.pbf';
+    const zoom = 15;
+    const data = await fetchTilesForBounds( $.worldOuterBounds, zoom, URL_TEMPLATE, ACCESS_TOKEN );
+    $.data = data.flat();
     
-    console.log( `⌛ fetching data …` );
-    const response = await fetch( "./results/hom-mvt-15.geojson" );
-    const tiles = await response.json();
-    $.data = tiles.flat();
+    // console.log( `⌛ fetching data …` );
+    // const response = await fetch( "./results/hom-mvt-15.geojson" );
+    // const tiles = await response.json();
+    // $.data = tiles.flat();
 
 }
 
 
 function addGround() {
     
+    console.log( $.worldTileSize );
+    console.log( $.worldBezelSize );
     const groundHeight = $.heights.ground;
-    const groundGeom = new THREE.BoxGeometry( $.worldTileSize.width, groundHeight, $.worldTileSize.height );
+    const groundGeom = new THREE.BoxGeometry( $.worldBezelSize.width, groundHeight, $.worldBezelSize.height );
     const ground = new THREE.Mesh( groundGeom, $.materials.ground );
     ground.translateY( - groundHeight / 2 );
     $.city.add( ground );
@@ -207,7 +209,18 @@ async function build() {
             console.log( `pruned ${clipped.length - pruned.length} ${type}` );
         }
 
-        const geom3s = pruned.map( geom2 => GEOM3.extrude( geom2, geom2.height ) );
+        const validated = pruned.filter( geom2 => {
+            try {
+                jscad.geometries.geom2.validate( geom2 );
+                return true;
+            } catch ( err ) {
+                return false;
+            }
+        });
+
+        console.log( `invalidated ${pruned.length - validated.length} ${type}` );
+
+        const geom3s = validated.map( geom2 => GEOM3.extrude( geom2, geom2.height ) );
         geom3map[ type ].push( ...geom3s );
         
     }
@@ -222,6 +235,9 @@ async function build() {
 
     for ( const type of TYPES ) {
     
+        const group = new THREE.Group();
+        group.name = type;
+
         let geom3s = geom3map[ type ];       
         
         if ( geom3s.length === 0 ) {
@@ -245,8 +261,10 @@ async function build() {
         for ( const geom3 of maybeMerged ) {
             const bgeom = GEOM3.toBufferGeometry( geom3 );
             const mesh = new THREE.Mesh( bgeom, $.materials[ type ] );
-            $.city.add( mesh );
+            group.add( mesh );
         }
+
+        $.city.add( group );
 
     }
 
@@ -312,9 +330,9 @@ function appendBuilding( feature ) {
 
     const type = "buildings";
     
-    const minHeight = 5;
+    // const minHeight = 5;
     let height = feature.properties.height; // ? feature.properties.height : $.heights.buildings;
-    if ( height <= minHeight ) height = $.heights.buildings;
+    // if ( height <= minHeight ) height = $.heights.buildings;
 
     const geom2 = GEOM2.fromGeoJSON( feature, $.center );
     geom2.type = type;

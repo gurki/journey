@@ -38,6 +38,10 @@ function computeDerived() {
         width: $.config.printScale * $.config.tileSize.width,
         height: $.config.printScale * $.config.tileSize.height
     };
+    $.worldBezelSize = {
+        width: $.config.printScale * ( $.config.tileSize.width + $.config.bezelSize.width ),
+        height: $.config.printScale * ( $.config.tileSize.height + $.config.bezelSize.height )
+    };
     const tx = Math.ceil( w / $.worldTileSize.width );
     const ty = Math.ceil( h / $.worldTileSize.height );
     $.tileCount = { x: tx, y: ty };
@@ -120,9 +124,6 @@ function initScene() {
 	$.scene.add( sun );
 
     $.scene.add( $.city );
-
-    const s = $.config.renderScale / $.config.printScale;
-    $.scene.scale.set( s, s, s );
 
 }
 

@@ -38,12 +38,12 @@ TYPES.forEach( type => {
 
 async function fetchData() {
 
-    const ACCESS_TOKEN = 'pk.eyJ1IjoidGd1cmRhbiIsImEiOiJjbHhqODE5MnIxaHpxMmlzM2VjbWthMGdxIn0.1Pix25iPyLlNetjOtghK1w';
+    const ACCESS_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
     const URL_TEMPLATE = 'https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/{z}/{x}/{y}.vector.pbf';
     const zoom = 15;
     const data = await fetchTilesForBounds( $.worldOuterBounds, zoom, URL_TEMPLATE, ACCESS_TOKEN );
     $.data = data.flat();
-    
+
     // console.log( `⌛ fetching data …` );
     // const response = await fetch( "./results/hom-mvt-15.geojson" );
     // const tiles = await response.json();
@@ -53,7 +53,7 @@ async function fetchData() {
 
 
 function addGround() {
-    
+
     console.log( $.worldTileSize );
     console.log( $.worldBezelSize );
     const groundHeight = $.heights.ground;
@@ -69,21 +69,21 @@ async function build() {
 
     console.time( "⏱ build" );
 
-    
+
     //  fetch data
 
     await fetchData();
     const features = $.data;
-    
+
 
     //  build city, start with ground plane
 
     console.log( "👷‍♀️ building city ..." );
     addGround();
-    
-    
+
+
     //  build cad objects
-    
+
     console.log( "🚧 converting geojson to cad objects ..." );
     console.time( "⏱ geojson -> cad" );
 
@@ -98,8 +98,8 @@ async function build() {
         if ( feature.geometry.type === "Point" ) {
             return;
         }
-        
-        const props = feature.properties;  
+
+        const props = feature.properties;
         const name = props.layerName;
 
         switch ( name ) {
@@ -123,9 +123,9 @@ async function build() {
 
     console.log( "🛣️ expanding path2 to geom2 ..." );
     console.time( "⏱ path2 -> geom2" );
-    
+
     for ( const type of TYPES ) {
-        
+
         const path2s = path2map[ type ];
 
         if ( path2s.length === 0 ) {
@@ -140,16 +140,16 @@ async function build() {
         //     const geom = new THREE.BufferGeometry().setFromPoints( points );
         //     geom.rotateX( -Math.PI / 2 );
         //     geom.translate( 0, 1, 0 );
-        //     const mesh = new THREE.Line( 
+        //     const mesh = new THREE.Line(
         //         geom,
         //         new THREE.LineBasicMaterial( { color: 0xff0000 } )
         //     );
         //     $.city.add( mesh );
         // });
 
-        const geom2s = path2s.map( path2 => Object.assign( {}, 
-            jscad.expansions.expand( { delta: path2.width, corners: "round", segments: 16 }, path2 ), 
-            { type, height: path2.height } 
+        const geom2s = path2s.map( path2 => Object.assign( {},
+            jscad.expansions.expand( { delta: path2.width, corners: "round", segments: 16 }, path2 ),
+            { type, height: path2.height }
         ));
 
         geom2map[ type ].push( ...geom2s );
@@ -163,9 +163,9 @@ async function build() {
 
     console.log( "📐 extruding geom2 to geom3 ..." );
     console.time( "⏱ geom2 -> geom3" );
-    
+
     for ( const type of TYPES ) {
-        
+
         const geom2s = geom2map[ type ];
 
         if ( geom2s.length === 0 ) {
@@ -173,25 +173,25 @@ async function build() {
         }
 
         geom2s.forEach( geom2 => jscad.geometries.geom2.validate( geom2 ) );
-        
+
         //  debug geom2s
         // geom2s.forEach( geom2 => {
         //     const points = jscad.geometries.geom2.toPoints( geom2 ).map( p => new THREE.Vector2( p[0], p[1] ) );
         //     const geom = new THREE.BufferGeometry().setFromPoints( [ ...points, points[0] ] );
         //     geom.rotateX( -Math.PI / 2 );
         //     geom.translate( 0, 1, 0 );
-        //     const mesh = new THREE.Line( 
+        //     const mesh = new THREE.Line(
         //         geom,
         //         new THREE.LineBasicMaterial( { color: 0xff0000 } )
         //     );
         //     $.city.add( mesh );
         // });
 
-        const allClipped = CLIP ? geom2s.map( geom2 => Object.assign( {}, 
-            jscad.booleans.intersect( geom2, clip2 ), 
-            { type, height: geom2.height } 
+        const allClipped = CLIP ? geom2s.map( geom2 => Object.assign( {},
+            jscad.booleans.intersect( geom2, clip2 ),
+            { type, height: geom2.height }
         )) : geom2s;
-        
+
         const clipped = allClipped.filter( geom2 => geom2.sides.length > 2 );
 
         if ( clipped.length === 0 ) {
@@ -222,32 +222,32 @@ async function build() {
 
         const geom3s = validated.map( geom2 => GEOM3.extrude( geom2, geom2.height ) );
         geom3map[ type ].push( ...geom3s );
-        
+
     }
-    
+
     console.timeEnd( "⏱ geom2 -> geom3" );
-    
+
 
     //  geom3 ->[merge?,convert]-> bufferGeometry
-    
+
     console.log( "🕸️ convert geom3 to mesh ..." );
     console.time( "⏱ geom3 -> mesh" );
 
     for ( const type of TYPES ) {
-    
+
         const group = new THREE.Group();
         group.name = type;
 
-        let geom3s = geom3map[ type ];       
-        
+        let geom3s = geom3map[ type ];
+
         if ( geom3s.length === 0 ) {
             continue;
         }
-        
+
         if ( VALIDATE ) {
             geom3s.forEach( geom3 => {
                 try {
-                    jscad.geometries.geom3.validate( geom3 ) 
+                    jscad.geometries.geom3.validate( geom3 )
                 } catch ( err ) {
                     // console.warn( type, err, geom3 );
                     // goods.push( geom3 );
@@ -275,28 +275,28 @@ async function build() {
 
 
 function appendLanduse( feature ) {
-    
+
     if ( [ "LineString", "MultiLineString" ].includes( feature.geometry.type ) ) {
         return;
     }
 
-    const EXCLUDE_CLASSES = [ 
-        "cliff",  
-        "fence", "gate", 
-        "commercial_area", "industrial", 
+    const EXCLUDE_CLASSES = [
+        "cliff",
+        "fence", "gate",
+        "commercial_area", "industrial",
         "parking", "hospital", "school"
     ];
 
-    const PARK_CLASSES = [ 
-        "park", "grass", 
-        "agriculture", 
-        "pitch", "cemetery" 
+    const PARK_CLASSES = [
+        "park", "grass",
+        "agriculture",
+        "pitch", "cemetery"
     ];
 
-    const GREENERY_CLASSES = [ 
+    const GREENERY_CLASSES = [
         "scrub", "hedge",
-        "wood", 
-        "national_park",  
+        "wood",
+        "national_park",
     ];
 
     const props = feature.properties;
@@ -324,12 +324,12 @@ function appendLanduse( feature ) {
 
 function appendBuilding( feature ) {
 
-    //  skip combined footprints of multipart building 
+    //  skip combined footprints of multipart building
     //  [1] https://docs.mapbox.com/data/tilesets/reference/mapbox-streets-v8#building-extrude-text
     if ( feature.properties.extrude === "false" ) return;
 
     const type = "buildings";
-    
+
     // const minHeight = 5;
     let height = feature.properties.height; // ? feature.properties.height : $.heights.buildings;
     // if ( height <= minHeight ) height = $.heights.buildings;
@@ -346,7 +346,7 @@ function appendWater( feature ) {
 
     const type = "water";
     const height = $.heights[ type ];
-    
+
     const geom2 = GEOM2.fromGeoJSON( feature, $.center );
     geom2.type = type;
     geom2.height = height;
@@ -356,19 +356,19 @@ function appendWater( feature ) {
 
 
 function appendRoad( feature ) {
-    
-    const STREET_CLASSES = [ 
-        "motorway", "motorway_link", 
-        "trunk", "trunk_link", 
-        "primary", "primary_link", 
-        "secondary", "secondary_link", 
-        "tertiary", "tertiary_link", 
+
+    const STREET_CLASSES = [
+        "motorway", "motorway_link",
+        "trunk", "trunk_link",
+        "primary", "primary_link",
+        "secondary", "secondary_link",
+        "tertiary", "tertiary_link",
         "street", "street_limited"
     ];
 
     const RAIL_CLASSES = [
-        "major_rail", 
-        "minor_rail", 
+        "major_rail",
+        "minor_rail",
         "service_rail"
     ];
 
@@ -378,8 +378,8 @@ function appendRoad( feature ) {
     if ( STREET_CLASSES.includes( props.class ) ) type = "street";
     if ( RAIL_CLASSES.includes( props.class ) ) type = "railway";
     if ( [ "pedestrian", "service" ].includes( props.class ) ) type = "path";
-    if ( [ "track", "path" ].includes( props.class ) ) type = "path"; 
-    
+    if ( [ "track", "path" ].includes( props.class ) ) type = "path";
+
     if ( ! type ) {
         //  aerialway
         return;
@@ -431,7 +431,7 @@ function appendRoad( feature ) {
         traffic_signals: 1,
         level_crossing: 1,
         intersection: 5,
-    };      
+    };
 
     const TYPE_WIDTHS = {
         steps: 1.5,
@@ -447,7 +447,7 @@ function appendRoad( feature ) {
         path: 1.8,
         bridleway: 2.5,
     };
-    
+
     const height = $.heights[ type ];
 
     if ( [ "Polygon", "MultiPolygon" ].includes( feature.geometry.type ) ) {
@@ -456,7 +456,7 @@ function appendRoad( feature ) {
         geom2.height = height;
         geom2map[ type ].push( geom2 );
         return;
-    }    
+    }
 
     const minWidth = FORCE_MIN_WIDTH ? 0.6 * $.config.printScale / 1000 : 0;
 

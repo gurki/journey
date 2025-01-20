@@ -1,7 +1,8 @@
-import { fetchHeightmapsForBounds } from "./src/heightmap.js";
-import * as util from "../arc/src/util.js";
+import { fetchHeightmapsForBounds } from "./heightmap.js";
+import * as util from "../../arc/src/util.js";
 import tilebelt from "@mapbox/tilebelt";
 import * as THREE from "three";
+import { STATE as $ } from "./state.js";
 
 
 function getBbox( bltr ) {
@@ -22,24 +23,27 @@ function getDimensions( bbox ) {
 }
 
 
-const bbox = tilebelt.tileToBBOX( [ 906, 404, 10 ] );
-console.log( bbox );
+const tile = tilebelt.pointToTile( 47.497788, 19.063219, 2 );
+const bbox = tilebelt.tileToBBOX( tile );
+console.log( tile, bbox );
 
 // const bounds = $.worldOuterBounds;
+const ACCESS_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 const bounds = getBbox( bbox );
-const heightmaps = await fetchHeightmapsForBounds( bounds, 10, import.meta.env.VITE_MAPBOX_ACCESS_TOKEN );
-const heightmap = heightmaps[ 0 ];
+const heightmaps = await fetchHeightmapsForBounds( bounds, 2, ACCESS_TOKEN );
+const heightmap = heightmaps[ 1 ];
 const heights = heightmap.data;
 
 const dims = getDimensions( heightmap.bbox );
 
+console.log( heightmap );
 
-const plane = new THREE.PlaneGeometry( dims.width, dims.height, 255, 255 );
+const plane = new THREE.PlaneGeometry( 10000, 10000, 255, 255 );
 plane.rotateX( - Math.PI / 2 );
 const verts = plane.attributes.position;
 
 for ( let i = 0; i < heights.length; i++ ) {
-    verts.setY( i, heights[ i ] );
+    verts.setY( i, 128 * Math.log( 512 + heights[ i ] ) );
 }
 
 plane.computeVertexNormals();

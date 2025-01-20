@@ -4,7 +4,9 @@ import { initialize } from "./src/initialize.js";
 
 
 initialize();
-await build();
+// await build();
+
+import "./src/terrain.js"
 
 
 
@@ -55,7 +57,7 @@ await build();
 // for ( const feature of data.flat() ) {
 
 //     const geom = feature.geometry;
-    
+
 //     if ( geom.type !== "LineString" ) {
 //         // console.log( geom.type );
 //         continue;
@@ -79,7 +81,7 @@ await build();
 //         }
 //         return point.setY( 3 );
 //     });
-    
+
 //     const curveB = new THREE.CatmullRomCurve3( projected );
 //     const geometry = new THREE.TubeGeometry( curveB, projected.length, 2, 4, false );
 //     const material = new THREE.MeshStandardMaterial( { color: getRandomColor() } );

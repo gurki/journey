@@ -1,0 +1,208 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.6.1/mapbox-gl.css" rel="stylesheet">
+    <style>
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
+        .sidebar {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: #fff;
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div class="sidebar">
+        <label>Resolution (Zoom Level):</label>
+        <input id="resolution-input" type="number" min="10" max="18" value="12" />
+        <button id="draw-button">Draw Polygon</button>
+        <pre id="selected-coordinates"></pre>
+    </div>
+
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.6.1/mapbox-gl.js"></script>
+    <script type="module">
+        mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+        console.log( import.meta.env.VITE_MAPBOX_ACCESS_TOKEN )
+
+        const map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/streets-v11',
+            center: [-122.084051, 37.385348],
+            zoom: 12,
+        });
+
+        const resolutionInput = document.getElementById('resolution-input');
+        const drawButton = document.getElementById('draw-button');
+
+        let drawing = false;
+        let geometry = null;
+
+        map.addControl(new mapboxgl.NavigationControl());
+
+        map.on('load', () => {
+            map.addSource('selected-features', {
+                type: 'geojson',
+                data: {
+                    type: 'FeatureCollection',
+                    features: [],
+                },
+            });
+
+            map.addLayer({
+                id: 'selected-polygon',
+                source: 'selected-features',
+                type: 'fill',
+                paint: {
+                    'fill-color': '#007bff',
+                    'fill-opacity': 0.5,
+                },
+            });
+
+            map.on('draw.create', updateSelection);
+            map.on('draw.delete', updateSelection);
+            map.on('draw.update', updateSelection);
+        });
+
+        drawButton.addEventListener('click', () => {
+            if (!drawing) {
+                drawing = true;
+                geometry = new mapboxgl.geojson({
+                    type: 'FeatureCollection',
+                    features: [],
+                });
+                map.addSource('draw-source', {
+                    type: 'geojson',
+                    data: geometry,
+                });
+                map.addLayer({
+                    id: 'draw-layer',
+                    source: 'draw-source',
+                    type: 'fill',
+                    paint: {
+                        'fill-color': '#f00',
+                        'fill-opacity': 0.5,
+                    },
+                });
+                map.on('click', (e) => {
+                    if (!drawing) return;
+                    const feature = e.features[0];
+                    geometry.features.push(feature);
+                    map.setPaintProperty('draw-layer', 'fill-color', getContrastingColor(feature.properties.color));
+                    drawButton.textContent = `Stop drawing`;
+                });
+            } else {
+                drawing = false;
+                geometry = null;
+                map.removeLayer('draw-layer');
+                map.removeSource('draw-source');
+                const resolution = parseInt(resolutionInput.value);
+                map.setZoom(resolution);
+                const selectedFeatures = geometry.features;
+
+                if (selectedFeatures.length > 0) {
+                    const boundingBox = getBoundingBox(selectedFeatures);
+                    const coordinates = selectedFeatures.map((feature) => feature.geometry.coordinates);
+                    document.getElementById('selected-coordinates').textContent = `Selected area: ${coordinates} \n\n`;
+                    document.getElementById('selected-coordinates').textContent += `Area of the selected region: ${getArea(boundingBox)} sq. km.`;
+                }
+            }
+        });
+
+        function getContrastingColor(color) {
+            const [ r1, g1, b1 ] = hexToRgb(color);
+            return rgbToHex(Math.round(255 - b1), Math.round(255 - g1), Math.round(255 - r1));
+        }
+
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : null;
+        }
+
+        function rgbToHex(r, g, b) {
+            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+        }
+
+        function getBoundingBox(features) {
+            let minLat = Infinity;
+            let maxLat = -Infinity;
+            let minLon = Infinity;
+            let maxLon = -Infinity;
+
+            features.forEach((feature) => {
+                feature.geometry.coordinates.forEach((ring, indexRing) => {
+                    ring.forEach((point) => {
+                        const lat = point[1];
+                        const lon = point[0];
+
+                        if (lat < minLat) minLat = lat;
+                        if (lon > maxLon) maxLon = lon;
+                        if (lat > maxLat) maxLat = lat;
+                        if (lon < minLon) minLon = lon;
+                    });
+                });
+            });
+
+            return [
+                [minLon, minLat],
+                [maxLon, minLat],
+                [maxLon, maxLat],
+                [minLon, maxLat],
+                [minLon, minLat]
+            ];
+        }
+
+        function getArea(boundingBox) {
+            const lat1 = (boundingBox[0][1] + boundingBox[2][1]) / 2;
+            const lon1 = (boundingBox[0][0] + boundingBox[2][0]) / 2;
+
+            return Math.abs((lon1 - boundingBox[3][0]) * Math.PI * 6371000 / 360);
+        }
+
+
+        function updateSelection(e) {
+            const data = MapboxDraw.getAll();
+            if (data.features.length > 0) {
+                const coords = data.features[0].geometry.coordinates;
+                console.log('Selected Coordinates:', coords);
+            } else {
+                console.log('No area selected');
+            }
+        }
+
+        // Clear button functionality
+        document.getElementById('clearButton').addEventListener('click', () => {
+            MapboxDraw.deleteAll();
+        });
+
+        // Export button functionality
+        document.getElementById('exportButton').addEventListener('click', () => {
+            const data = MapboxDraw.getAll();
+            if (data.features.length > 0) {
+                const coords = data.features[0].geometry.coordinates;
+                alert('Exported Coordinates: ' + JSON.stringify(coords));
+            } else {
+                alert('No area selected to export!');
+            }
+        });
+
+    </script>
+    </body>
+</html>

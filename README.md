@@ -60,3 +60,8 @@
 ### gpx
 - https://github.com/mapbox/togeojson
 - https://github.com/mapbox/geojson-tidy
+
+### custom tiles
+- https://gist.github.com/markuman/230af4cc11333ca3efc22eed60575adc
+- https://github.com/mapbox/mbtiles-spec/blob/master/1.3/spec.md
+- https://github.com/SenorKarlos/mbtiles

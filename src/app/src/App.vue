@@ -85,7 +85,7 @@ function copyConfig() {
 <template>
   <div class="app-container">
     <header>
-      <h1>Journey - 3D Print Tile Selector</h1>
+      <h1>Journey Tile Selector</h1>
     </header>
     
     <main>
@@ -116,19 +116,27 @@ function copyConfig() {
 
 html, body {
   height: 100%;
+  width: 100%;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   background-color: #121212;
   color: #e0e0e0;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
 }
 
 #app {
   height: 100%;
+  width: 100%;
 }
 
 .app-container {
   display: flex;
   flex-direction: column;
   height: 100%;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
 header {
@@ -142,6 +150,7 @@ header {
 main {
   flex: 1;
   min-height: 400px;
+  width: 100%;
   overflow: hidden;
 }
 

@@ -535,12 +535,14 @@ function drawTileGrid() {
 .map-selector-container {
     display: flex;
     height: 100%;
+    width: 100%;
 }
 
 .map-container {
     flex: 1;
     height: 100%;
     position: relative;
+    width: 100%;
 }
 
 .controls-panel {

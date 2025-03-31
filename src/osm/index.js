@@ -4,9 +4,9 @@ import { initialize } from "./src/initialize.js";
 
 
 initialize();
-// await build();
+await build();
 
-import "./src/terrain.js"
+// import "./src/terrain.js"
 
 
 

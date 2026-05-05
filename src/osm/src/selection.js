@@ -1,0 +1,254 @@
+import { STATE as $ } from "./state.js";
+import * as util from "../../arc/src/util.js";
+
+const DEFAULT_PRINT = {
+    widthMm: Math.round( $.config.tileSize.width * 1000 ),
+    heightMm: Math.round( $.config.tileSize.height * 1000 ),
+    bezelMm: Math.round( $.config.bezelSize.width * 1000 ),
+};
+
+function getInitialCenter() {
+    return [
+        ( $.config.bounds.xmin + $.config.bounds.xmax ) / 2,
+        ( $.config.bounds.ymin + $.config.bounds.ymax ) / 2,
+    ];
+}
+
+function getInitialZoom() {
+    return 13.4;
+}
+
+function createSelectionShell() {
+    const screen = document.createElement( "main" );
+    const detailOptions = Object.entries( $.config.mapbox.detailOptions )
+        .map( ( [ value, option ] ) => `
+            <option value="${value}" ${value === $.config.mapbox.detail ? "selected" : ""}>
+                ${option.label} · z${option.zoom}
+            </option>
+        ` )
+        .join( "" );
+
+    screen.id = "selection";
+    screen.className = "selection";
+    screen.innerHTML = `
+        <div id="selection-map" class="selection__map"></div>
+        <div class="selection__frame-wrap" aria-hidden="true">
+            <div id="selection-frame" class="selection__frame">
+                <span class="selection__corner selection__corner--tl"></span>
+                <span class="selection__corner selection__corner--tr"></span>
+                <span class="selection__corner selection__corner--br"></span>
+                <span class="selection__corner selection__corner--bl"></span>
+            </div>
+        </div>
+        <section class="selection__panel" aria-label="Print setup">
+            <div class="selection__heading">
+                <p>Journey</p>
+                <h1>Select Print Area</h1>
+            </div>
+            <label class="field">
+                <span>Print width</span>
+                <div class="field__control">
+                    <input id="print-width" type="number" min="40" max="300" step="1" value="${DEFAULT_PRINT.widthMm}">
+                    <span>mm</span>
+                </div>
+            </label>
+            <label class="field">
+                <span>Print height</span>
+                <div class="field__control">
+                    <input id="print-height" type="number" min="40" max="300" step="1" value="${DEFAULT_PRINT.heightMm}">
+                    <span>mm</span>
+                </div>
+            </label>
+            <label class="field">
+                <span>Bezel</span>
+                <div class="field__control">
+                    <input id="print-bezel" type="number" min="0" max="30" step="0.5" value="${DEFAULT_PRINT.bezelMm}">
+                    <span>mm</span>
+                </div>
+            </label>
+            <label class="field">
+                <span>Detail</span>
+                <div class="field__control field__control--select">
+                    <select id="map-detail">
+                        ${detailOptions}
+                    </select>
+                </div>
+            </label>
+            <div class="readout" aria-live="polite">
+                <div>
+                    <span>Map area</span>
+                    <strong id="selection-area-size">-</strong>
+                </div>
+                <div>
+                    <span>Scale</span>
+                    <strong id="selection-scale">-</strong>
+                </div>
+                <div>
+                    <span>Tile zoom</span>
+                    <strong id="selection-zoom">-</strong>
+                </div>
+                <div>
+                    <span>Bounds</span>
+                    <strong id="selection-bounds">-</strong>
+                </div>
+            </div>
+            <button id="build-city" class="selection__button" type="button">Build City</button>
+        </section>
+    `;
+
+    document.body.prepend( screen );
+    return screen;
+}
+
+function getFrameSize( frame, mapEl ) {
+    const frameRect = frame.getBoundingClientRect();
+    const mapRect = mapEl.getBoundingClientRect();
+    return {
+        width: frameRect.width,
+        height: frameRect.height,
+        left: frameRect.left - mapRect.left,
+        top: frameRect.top - mapRect.top,
+    };
+}
+
+function getBoundsFromFrame( map, frame, mapEl ) {
+    const box = getFrameSize( frame, mapEl );
+    const nw = map.unproject( [ box.left, box.top ] );
+    const se = map.unproject( [ box.left + box.width, box.top + box.height ] );
+
+    return {
+        xmin: Math.min( nw.lng, se.lng ),
+        ymin: Math.min( nw.lat, se.lat ),
+        xmax: Math.max( nw.lng, se.lng ),
+        ymax: Math.max( nw.lat, se.lat ),
+    };
+}
+
+function measureBounds( bounds ) {
+    const center = {
+        latitude: ( bounds.ymin + bounds.ymax ) / 2,
+        longitude: ( bounds.xmin + bounds.xmax ) / 2,
+    };
+    const bottomLeft = { latitude: bounds.ymin, longitude: bounds.xmin };
+    const topRight = { latitude: bounds.ymax, longitude: bounds.xmax };
+    const bl = util.gpsToEnu( center, bottomLeft );
+    const tr = util.gpsToEnu( center, topRight );
+
+    return {
+        width: Math.abs( tr.x - bl.x ),
+        height: Math.abs( tr.y - bl.y ),
+    };
+}
+
+function formatMeters( value ) {
+    return value >= 1000 ? `${( value / 1000 ).toFixed( 2 )} km` : `${Math.round( value )} m`;
+}
+
+function formatBounds( bounds ) {
+    return `${bounds.ymin.toFixed( 5 )}, ${bounds.xmin.toFixed( 5 )}`;
+}
+
+function chooseVectorTileZoom( detail ) {
+    return $.config.mapbox.detailOptions[ detail ].zoom;
+}
+
+function syncFrameAspect( frame, widthInput, heightInput ) {
+    const widthMm = Number( widthInput.value );
+    const heightMm = Number( heightInput.value );
+    const aspect = widthMm / heightMm;
+    frame.style.aspectRatio = `${widthMm} / ${heightMm}`;
+    frame.classList.toggle( "selection__frame--portrait", aspect < 0.9 );
+}
+
+function readPrintSettings( widthInput, heightInput, bezelInput ) {
+    return {
+        widthMm: Number( widthInput.value ),
+        heightMm: Number( heightInput.value ),
+        bezelMm: Number( bezelInput.value ),
+    };
+}
+
+function applySelection( bounds, dimensions, print, detail ) {
+    $.config.bounds = bounds;
+    $.config.tileSize = {
+        width: print.widthMm / 1000,
+        height: print.heightMm / 1000,
+    };
+    $.config.bezelSize = {
+        width: print.bezelMm / 1000,
+        height: print.bezelMm / 1000,
+    };
+    $.config.printScale = dimensions.width / $.config.tileSize.width;
+    $.config.mapbox.detail = detail;
+    $.config.mapbox.vectorTileZoom = chooseVectorTileZoom( detail );
+}
+
+export async function selectPrintArea() {
+    if ( ! window.mapboxgl ) {
+        throw new Error( "Mapbox GL JS did not load." );
+    }
+
+    window.mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+
+    const screen = createSelectionShell();
+    const mapEl = screen.querySelector( "#selection-map" );
+    const frame = screen.querySelector( "#selection-frame" );
+    const widthInput = screen.querySelector( "#print-width" );
+    const heightInput = screen.querySelector( "#print-height" );
+    const bezelInput = screen.querySelector( "#print-bezel" );
+    const detailInput = screen.querySelector( "#map-detail" );
+    const areaSize = screen.querySelector( "#selection-area-size" );
+    const scale = screen.querySelector( "#selection-scale" );
+    const zoom = screen.querySelector( "#selection-zoom" );
+    const boundsText = screen.querySelector( "#selection-bounds" );
+    const buildButton = screen.querySelector( "#build-city" );
+
+    syncFrameAspect( frame, widthInput, heightInput );
+
+    const map = new window.mapboxgl.Map({
+        container: mapEl,
+        style: "mapbox://styles/mapbox/streets-v12",
+        center: getInitialCenter(),
+        zoom: getInitialZoom(),
+        pitch: 0,
+        bearing: 0,
+    });
+
+    map.addControl( new window.mapboxgl.NavigationControl({ visualizePitch: false }), "bottom-right" );
+
+    function updateReadout() {
+        syncFrameAspect( frame, widthInput, heightInput );
+        const print = readPrintSettings( widthInput, heightInput, bezelInput );
+        const bounds = getBoundsFromFrame( map, frame, mapEl );
+        const dimensions = measureBounds( bounds );
+        const printScale = dimensions.width / ( print.widthMm / 1000 );
+        const vectorTileZoom = chooseVectorTileZoom( detailInput.value );
+
+        areaSize.textContent = `${formatMeters( dimensions.width )} x ${formatMeters( dimensions.height )}`;
+        scale.textContent = `1:${Math.round( printScale ).toLocaleString()}`;
+        zoom.textContent = `z${vectorTileZoom}`;
+        boundsText.textContent = formatBounds( bounds );
+    }
+
+    await new Promise( resolve => map.once( "load", resolve ) );
+    updateReadout();
+
+    map.on( "move", updateReadout );
+    map.on( "zoom", updateReadout );
+    window.addEventListener( "resize", updateReadout );
+    [ widthInput, heightInput, bezelInput, detailInput ].forEach( input => input.addEventListener( "input", updateReadout ) );
+
+    return new Promise( resolve => {
+        buildButton.addEventListener( "click", () => {
+            const print = readPrintSettings( widthInput, heightInput, bezelInput );
+            const bounds = getBoundsFromFrame( map, frame, mapEl );
+            const dimensions = measureBounds( bounds );
+            applySelection( bounds, dimensions, print, detailInput.value );
+
+            window.removeEventListener( "resize", updateReadout );
+            map.remove();
+            screen.remove();
+            resolve();
+        });
+    });
+}

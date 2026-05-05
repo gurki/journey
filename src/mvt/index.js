@@ -69,7 +69,7 @@ export async function fetchTilesForBounds( bbox, zoom, urlTemplate, accessToken 
 }
 
 
-// const ACCESS_TOKEN = 'pk.eyJ1IjoidGd1cmRhbiIsImEiOiJjbHhqODE5MnIxaHpxMmlzM2VjbWthMGdxIn0.1Pix25iPyLlNetjOtghK1w';
+// const ACCESS_TOKEN = process.env.VITE_MAPBOX_ACCESS_TOKEN;
 // const URL_TEMPLATE = 'https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/{z}/{x}/{y}.vector.pbf';
 // const bbox = { ymin: 47.47749, xmin: 19.0287947, ymax: 47.52146, xmax: 19.0854007 };
 // // const bbox = { xmin: 19.0722, ymin: 47.5089, xmax: 19.0867, ymax: 47.5190 };

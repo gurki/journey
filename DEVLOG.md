@@ -78,7 +78,7 @@
 - great resources out there and widely supported standard
 - mapbox data quality is fantastic, e.g. building heights
 - mapbox-gl loads 3d models
-- can they be accessed somehow? browser requests go to [https://api.mapbox.com/v4/mapbox.mapbox-bathymetry-v2,mapbox.mapbox-streets-v8,mapbox.mapbox-terrain-v2,mapbox.mapbox-models-v1/14/8295/5634.vector.pbf?sku=101lREwqwf5Rh&access_token=pk.eyJ1IjoiZXhhbXBsZXMiLCJhIjoiY2p0MG01MXRqMW45cjQzb2R6b2ptc3J4MSJ9.zA2W0IkI0c6KaAhJfk9bWg](this endpoint)
+- can they be accessed somehow? browser requests go to Mapbox vector-tile endpoints with an access token
 - the resulting `mvt` don't contain anything new
 - the additional `gbl` that are being fetched contain roof geometry
 - but no building facades, and i couldn't figure out where that's from

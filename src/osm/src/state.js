@@ -28,6 +28,23 @@ export const STATE = {
         tileSize: { width: 0.141, height: 0.141 },
         bezelSize: { width: 0.009, height: 0.009 },
         layerHeightMm: 0.2,   
+        mapbox: {
+            vectorTileZoom: 15,
+            detail: "street",
+            detailOptions: {
+                country: { label: "Country", zoom: 9 },
+                city: { label: "City", zoom: 12 },
+                street: { label: "Street", zoom: 15 },
+            },
+        },
+        terrain: {
+            enabled: true,
+            demZoom: 13,
+            exaggeration: 1,
+            segments: 160,
+            drapeMode: "vertex",
+            smoothingRadius: 18,
+        },
         colors: {
             buildings: "#ccc",  //  houses and more
             greenery: "#294",   //  trees, bushes, shrubbery
@@ -93,5 +110,6 @@ export const STATE = {
     worldBezelSize: null,
     worldLayerHeight: null,
     tileCount: null,
+    terrain: null,
 
 }

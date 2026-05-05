@@ -1,7 +1,6 @@
 import * as tilebelt from "@mapbox/tilebelt"
 import { load } from '@loaders.gl/core';
 import { MVTLoader } from '@loaders.gl/mvt';
-import fs from "fs";
 
 export function tileIndicesForBounds( bbox, zoom ) {
     

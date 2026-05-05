@@ -40,7 +40,8 @@ async function fetchData() {
 
     const ACCESS_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
     const URL_TEMPLATE = 'https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/{z}/{x}/{y}.vector.pbf';
-    const zoom = 15;
+    const zoom = $.config.mapbox.vectorTileZoom;
+    console.log( `🗺️ fetching Mapbox Streets vector tiles at z${zoom}` );
     const data = await fetchTilesForBounds( $.worldOuterBounds, zoom, URL_TEMPLATE, ACCESS_TOKEN );
     $.data = data.flat();
 
@@ -54,11 +55,16 @@ async function fetchData() {
 
 function addGround() {
 
+    if ( $.terrain ) {
+        return;
+    }
+
     console.log( $.worldTileSize );
     console.log( $.worldBezelSize );
     const groundHeight = $.heights.ground;
     const groundGeom = new THREE.BoxGeometry( $.worldBezelSize.width, groundHeight, $.worldBezelSize.height );
     const ground = new THREE.Mesh( groundGeom, $.materials.ground );
+    ground.name = "base";
     ground.translateY( - groundHeight / 2 );
     $.city.add( ground );
 

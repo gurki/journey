@@ -1,12 +1,24 @@
 import { STATE as $ } from "./src/state.js";
+import { selectPrintArea } from "./src/selection.js";
 import { build } from "./src/build.js";
 import { initialize } from "./src/initialize.js";
+import { buildTerrain, drapeCityOnTerrain } from "./src/terrain.js";
 
 
-initialize();
-// await build();
+async function main() {
+    await selectPrintArea();
+    initialize();
+    await buildTerrain();
+    await build();
+    drapeCityOnTerrain();
 
-import "./src/terrain.js"
+    const s = $.config.renderScale / $.config.printScale;
+    $.scene.scale.set( s, s, s );
+}
+
+main();
+
+// import "./src/terrain.js"
 
 
 
@@ -95,5 +107,3 @@ import "./src/terrain.js"
 
 
 
-const s = $.config.renderScale / $.config.printScale;
-$.scene.scale.set( s, s, s );

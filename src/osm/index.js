@@ -3,17 +3,30 @@ import { selectPrintArea } from "./src/selection.js";
 import { build } from "./src/build.js";
 import { initialize } from "./src/initialize.js";
 import { buildTerrain, drapeCityOnTerrain } from "./src/terrain.js";
+import { hideLoading, showLoading, tickLoading } from "./src/loading.js";
 
 
 async function main() {
+    console.log( "🚀 Journey city print build starting" );
+    console.time( "⏱ total pipeline" );
     await selectPrintArea();
+    showLoading( "Preparing workspace", "Setting up renderer and print coordinates...", 5 );
+    await tickLoading( "Preparing workspace", "Setting up renderer and print coordinates...", 8 );
     initialize();
+    await tickLoading( "Building terrain", "Fetching and decoding elevation tiles...", 14 );
     await buildTerrain();
+    await tickLoading( "Building city geometry", "Fetching Mapbox vector features...", 34 );
     await build();
+    await tickLoading( "Placing layers", "Projecting printable map layers onto terrain...", 82 );
     drapeCityOnTerrain();
 
     const s = $.config.renderScale / $.config.printScale;
     $.scene.scale.set( s, s, s );
+    console.log( `🔍 scene render scale ${s.toFixed( 4 )}` );
+    console.timeEnd( "⏱ total pipeline" );
+    console.log( "✅ model ready for preview/export" );
+    await tickLoading( "Model ready", "Preview and export controls are available.", 100 );
+    setTimeout( hideLoading, 650 );
 }
 
 main();

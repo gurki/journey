@@ -4,6 +4,7 @@ import * as PATH2 from "./cad/path2.js";
 import * as GEOM2 from "./cad/geom2.js";
 import * as GEOM3 from "./cad/geom3.js";
 import * as jscad from "@jscad/modeling";
+import { tickLoading, updateLoading } from "./loading.js";
 
 import * as THREE from "three";
 
@@ -25,14 +26,19 @@ const TYPES = [
     "path"
 ];
 
+const OVERLAY_TYPES = [ "parks", "greenery", "stone", "pedestrian" ];
+const TRANSPORT_TYPES = [ "street", "railway", "path" ];
+
 let path2map = {};
 let geom2map = {};
 let geom3map = {};
+let buildStats = {};
 
 TYPES.forEach( type => {
     path2map[ type ] = [];
     geom2map[ type ] = [];
     geom3map[ type ] = [];
+    buildStats[ type ] = { features: 0, skipped: 0, paths: 0, geom2: 0, geom3: 0, meshes: 0 };
 });
 
 
@@ -42,6 +48,7 @@ async function fetchData() {
     const URL_TEMPLATE = 'https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/{z}/{x}/{y}.vector.pbf';
     const zoom = $.config.mapbox.vectorTileZoom;
     console.log( `🗺️ fetching Mapbox Streets vector tiles at z${zoom}` );
+    updateLoading( "Fetching map data", `Mapbox Streets vector tiles z${zoom}`, 36 );
     const data = await fetchTilesForBounds( $.worldOuterBounds, zoom, URL_TEMPLATE, ACCESS_TOKEN );
     $.data = data.flat();
 
@@ -71,15 +78,63 @@ function addGround() {
 }
 
 
+function isTypeEnabled( type ) {
+    const detail = $.config.mapbox.detailOptions[ $.config.mapbox.detail ];
+    return ! detail.types || detail.types.includes( type );
+}
+
+
+function track( type, key, count = 1 ) {
+    buildStats[ type ][ key ] += count;
+}
+
+
+function logTypeStats( label, key ) {
+    const rows = TYPES
+        .map( type => [ type, buildStats[ type ][ key ] ] )
+        .filter( ( [ , count ] ) => count > 0 )
+        .map( ( [ type, count ] ) => `${type}:${count}` );
+
+    console.log( `${label} ${rows.length > 0 ? rows.join( "  " ) : "none"}` );
+}
+
+
+function getDetailConfig() {
+    return $.config.mapbox.detailOptions[ $.config.mapbox.detail ];
+}
+
+
+function mmToWorld( mm ) {
+    return mm * $.config.printScale / 1000;
+}
+
+
+function getPathLength( path2 ) {
+    let length = 0;
+    const points = path2.points;
+
+    for ( let i = 1; i < points.length; i++ ) {
+        length += Math.hypot(
+            points[ i ][ 0 ] - points[ i - 1 ][ 0 ],
+            points[ i ][ 1 ] - points[ i - 1 ][ 1 ]
+        );
+    }
+
+    return length;
+}
+
+
 async function build() {
 
     console.time( "⏱ build" );
+    console.log( `🧭 detail preset "${$.config.mapbox.detail}"` );
 
 
     //  fetch data
 
     await fetchData();
     const features = $.data;
+    console.log( `🧾 loaded ${features.length.toLocaleString()} vector features` );
 
 
     //  build city, start with ground plane
@@ -91,6 +146,7 @@ async function build() {
     //  build cad objects
 
     console.log( "🚧 converting geojson to cad objects ..." );
+    await tickLoading( "Building city geometry", "Classifying vector features into printable layers...", 44 );
     console.time( "⏱ geojson -> cad" );
 
     const clip2 = jscad.primitives.rectangle( { size: [ $.worldTileSize.width, $.worldTileSize.height ] } );
@@ -123,11 +179,16 @@ async function build() {
     });
 
     console.timeEnd( "⏱ geojson -> cad" );
+    logTypeStats( "🧮 accepted features:", "features" );
+    logTypeStats( "🚫 skipped filtered features:", "skipped" );
+    logTypeStats( "✏️ line paths:", "paths" );
+    logTypeStats( "🔷 polygon footprints:", "geom2" );
 
 
     //  path2 ->[expand]-> geom2
 
     console.log( "🛣️ expanding path2 to geom2 ..." );
+    await tickLoading( "Building roads", "Expanding centerlines into printable surfaces...", 55 );
     console.time( "⏱ path2 -> geom2" );
 
     for ( const type of TYPES ) {
@@ -154,20 +215,26 @@ async function build() {
         // });
 
         const geom2s = path2s.map( path2 => Object.assign( {},
-            jscad.expansions.expand( { delta: path2.width, corners: "round", segments: 16 }, path2 ),
+            jscad.expansions.expand(
+                { delta: path2.width, corners: "round", segments: $.config.terrain.roadExpansionSegments },
+                path2
+            ),
             { type, height: path2.height }
         ));
 
         geom2map[ type ].push( ...geom2s );
+        track( type, "geom2", geom2s.length );
 
     }
 
     console.timeEnd( "⏱ path2 -> geom2" );
+    logTypeStats( "🧱 expanded surfaces:", "geom2" );
 
 
     //  geom2 ->[extrude]-> geom3
 
     console.log( "📐 extruding geom2 to geom3 ..." );
+    await tickLoading( "Extruding layers", "Turning map surfaces into solids...", 64 );
     console.time( "⏱ geom2 -> geom3" );
 
     for ( const type of TYPES ) {
@@ -228,15 +295,18 @@ async function build() {
 
         const geom3s = validated.map( geom2 => GEOM3.extrude( geom2, geom2.height ) );
         geom3map[ type ].push( ...geom3s );
+        track( type, "geom3", geom3s.length );
 
     }
 
     console.timeEnd( "⏱ geom2 -> geom3" );
+    logTypeStats( "📦 printable solids:", "geom3" );
 
 
     //  geom3 ->[merge?,convert]-> bufferGeometry
 
     console.log( "🕸️ convert geom3 to mesh ..." );
+    await tickLoading( "Preparing preview mesh", "Converting printable solids into Three.js meshes...", 74 );
     console.time( "⏱ geom3 -> mesh" );
 
     for ( const type of TYPES ) {
@@ -267,7 +337,10 @@ async function build() {
         for ( const geom3 of maybeMerged ) {
             const bgeom = GEOM3.toBufferGeometry( geom3 );
             const mesh = new THREE.Mesh( bgeom, $.materials[ type ] );
+            mesh.userData.type = type;
+            mesh.userData.placement = $.config.terrain.placement[ type ];
             group.add( mesh );
+            track( type, "meshes" );
         }
 
         $.city.add( group );
@@ -275,6 +348,7 @@ async function build() {
     }
 
     console.timeEnd( "⏱ geom3 -> mesh" );
+    logTypeStats( "🕸️ scene meshes:", "meshes" );
     console.timeEnd( "⏱ build" );
 
 }
@@ -320,10 +394,17 @@ function appendLanduse( feature ) {
         return;
     }
 
+    if ( ! isTypeEnabled( type ) ) {
+        track( type, "skipped" );
+        return;
+    }
+
     const geom2 = GEOM2.fromGeoJSON( feature, $.center );
     geom2.type = type;
-    geom2.height = $.heights[ type ];
+    geom2.height = getLayerHeight( type );
     geom2map[ type ].push( geom2 );
+    track( type, "features" );
+    track( type, "geom2" );
 
 }
 
@@ -335,6 +416,10 @@ function appendBuilding( feature ) {
     if ( feature.properties.extrude === "false" ) return;
 
     const type = "buildings";
+    if ( ! isTypeEnabled( type ) ) {
+        track( type, "skipped" );
+        return;
+    }
 
     // const minHeight = 5;
     let height = feature.properties.height; // ? feature.properties.height : $.heights.buildings;
@@ -344,6 +429,8 @@ function appendBuilding( feature ) {
     geom2.type = type;
     geom2.height = height;
     geom2map[ type ].push( geom2 );
+    track( type, "features" );
+    track( type, "geom2" );
 
 }
 
@@ -351,13 +438,32 @@ function appendBuilding( feature ) {
 function appendWater( feature ) {
 
     const type = "water";
+    if ( ! isTypeEnabled( type ) ) {
+        track( type, "skipped" );
+        return;
+    }
     const height = $.heights[ type ];
 
     const geom2 = GEOM2.fromGeoJSON( feature, $.center );
     geom2.type = type;
     geom2.height = height;
     geom2map[ type ].push( geom2 );
+    track( type, "features" );
+    track( type, "geom2" );
 
+}
+
+
+function getLayerHeight( type ) {
+    if ( OVERLAY_TYPES.includes( type ) ) {
+        return $.worldLayerHeight * $.config.terrain.overlayThicknessLayers;
+    }
+
+    if ( TRANSPORT_TYPES.includes( type ) ) {
+        return $.worldLayerHeight * $.config.terrain.transportThicknessLayers;
+    }
+
+    return $.heights[ type ];
 }
 
 
@@ -391,42 +497,55 @@ function appendRoad( feature ) {
         return;
     }
 
+    if ( ! isTypeEnabled( type ) ) {
+        track( type, "skipped" );
+        return;
+    }
+
+    if ( ! isRoadFeatureEnabled( type, props ) ) {
+        track( type, "skipped" );
+        return;
+    }
+
     if ( [ "service:drive_through", "service:driveway", "service:parking_aisle", "service:parking" ].includes( props.type ) ) {
+        track( type, "skipped" );
         return;
     }
 
     if ( [ "unclassified", "disused", "abandoned" ].includes( props.type ) ) {
     // if ( [ "crossing", "unclassified", "steps", "subway", "disused", "abandoned", "corridor" ].includes( props.type ) ) {
+        track( type, "skipped" );
         return;
     }
 
     if ( props.structure !== "none" ) {
         //  bridge, tunnel
+        track( type, "skipped" );
         return;
     }
 
     const CLASS_WIDTHS = {
-        motorway: 25,
-        motorway_link: 15,
-        trunk: 15,
-        trunk_link: 10,
-        primary: 15,
-        primary_link: 12,
-        secondary: 10,
-        secondary_link: 8,
-        tertiary: 8,
-        tertiary_link: 6,
-        street: 9,
-        street_limited: 7,
-        pedestrian: 4,
+        motorway: 14,
+        motorway_link: 9,
+        trunk: 10,
+        trunk_link: 7,
+        primary: 8,
+        primary_link: 6,
+        secondary: 5.5,
+        secondary_link: 4.5,
+        tertiary: 4,
+        tertiary_link: 3.5,
+        street: 2.8,
+        street_limited: 2.4,
+        pedestrian: 3,
         construction: 5,
-        track: 3,
-        service: 4,
+        track: 2,
+        service: 2.5,
         ferry: 20,
-        path: 1.8,
-        major_rail: 4,
-        minor_rail: 3,
-        service_rail: 2.5,
+        path: 1.2,
+        major_rail: 2.2,
+        minor_rail: 1.6,
+        service_rail: 1.2,
         aerialway: 2,
         golf: 1,
         junction: 5,
@@ -442,25 +561,27 @@ function appendRoad( feature ) {
     const TYPE_WIDTHS = {
         steps: 1.5,
         corridor: 2.5,
-        sidewalk: 1.8,
-        crossing: 2,
+        sidewalk: 1.2,
+        crossing: 1.4,
         piste: 4,
-        mountain_bike: 1.5,
-        hiking: 1,
-        trail: 1.2,
-        cycleway: 2,
-        footway: 1.5,
-        path: 1.8,
-        bridleway: 2.5,
+        mountain_bike: 1,
+        hiking: 0.8,
+        trail: 0.9,
+        cycleway: 1.3,
+        footway: 1,
+        path: 1.1,
+        bridleway: 1.6,
     };
 
-    const height = $.heights[ type ];
+    const height = getLayerHeight( type );
 
     if ( [ "Polygon", "MultiPolygon" ].includes( feature.geometry.type ) ) {
         const geom2 = GEOM2.fromGeoJSON( feature, $.center );
         geom2.type = type;
         geom2.height = height;
         geom2map[ type ].push( geom2 );
+        track( type, "features" );
+        track( type, "geom2" );
         return;
     }
 
@@ -471,7 +592,12 @@ function appendRoad( feature ) {
     else if ( props.type in TYPE_WIDTHS ) width = Math.max( TYPE_WIDTHS[ props.type ], minWidth );
     else if ( props.class in CLASS_WIDTHS ) width = Math.max( CLASS_WIDTHS[ props.class ], minWidth );
 
-    const path2s = PATH2.fromGeoJSON( feature, $.center );
+    const detail = getDetailConfig();
+    const path2s = PATH2.fromGeoJSON(
+        feature,
+        $.center,
+        { simplifyTolerance: mmToWorld( detail.roadSimplifyMm ) }
+    ).filter( path2 => getPathLength( path2 ) >= mmToWorld( detail.minRoadLengthMm ) );
 
     path2s.forEach( path2 => {
         path2.type = type;
@@ -480,6 +606,28 @@ function appendRoad( feature ) {
         path2map[ type ].push( path2 );
     });
 
+    if ( path2s.length > 0 ) {
+        track( type, "features" );
+        track( type, "paths", path2s.length );
+    } else {
+        track( type, "skipped" );
+    }
+
+}
+
+
+function isRoadFeatureEnabled( type, props ) {
+    const detail = getDetailConfig();
+
+    if ( type === "street" ) {
+        return detail.roadClasses.includes( props.class );
+    }
+
+    if ( type === "railway" ) {
+        return detail.railClasses.includes( props.class );
+    }
+
+    return detail.includePaths;
 }
 
 

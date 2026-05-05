@@ -7,6 +7,8 @@ import * as THREE from "three"
 
 
 function computeDerived() {
+    console.log( "🧭 computing print-space coordinates ..." );
+    console.time( "⏱ derive dimensions" );
     
     $.center = { 
         latitude: ( $.config.bounds.ymax + $.config.bounds.ymin ) / 2, 
@@ -73,10 +75,22 @@ function computeDerived() {
         $.polygons[ type ] = [];
     }
 
+    console.log(
+        `   center ${$.center.latitude.toFixed( 6 )}, ${$.center.longitude.toFixed( 6 )}`
+    );
+    console.log(
+        `   tile ${$.worldTileSize.width.toFixed( 1 )}m x ${$.worldTileSize.height.toFixed( 1 )}m, bezel slab ${$.worldBezelSize.width.toFixed( 1 )}m x ${$.worldBezelSize.height.toFixed( 1 )}m`
+    );
+    console.log(
+        `   print layer height ${$.worldLayerHeight.toFixed( 2 )}m at 1:${Math.round( $.config.printScale ).toLocaleString()}`
+    );
+    console.timeEnd( "⏱ derive dimensions" );
+
 }
 
 
 function initRenderer() {
+    console.log( "🎥 initializing renderer and camera ..." );
 
     $.container = document.getElementById( $.config.container );
     $.containerSize.x = container.clientWidth;
@@ -106,6 +120,7 @@ function initRenderer() {
 
 
 function initScene() {
+    console.log( "💡 setting up scene lights ..." );
     
     $.scene = new THREE.Scene();
 
@@ -155,12 +170,14 @@ function animate() {
 
 
 function initialize() {
-    
+    console.log( "🧰 initializing 3D workspace ..." );
+    console.time( "⏱ initialize" );
     computeDerived();
     initTweakpane();
     initRenderer();
     initScene();
     animate();
+    console.timeEnd( "⏱ initialize" );
 
 }
 

@@ -181,6 +181,18 @@ function applySelection( bounds, dimensions, print, detail ) {
     $.config.printScale = dimensions.width / $.config.tileSize.width;
     $.config.mapbox.detail = detail;
     $.config.mapbox.vectorTileZoom = chooseVectorTileZoom( detail );
+
+    console.log( "🖼️ print area selected" );
+    console.log(
+        `   print ${print.widthMm}x${print.heightMm}mm + ${print.bezelMm}mm bezel`
+    );
+    console.log(
+        `   world ${formatMeters( dimensions.width )} x ${formatMeters( dimensions.height )} at 1:${Math.round( $.config.printScale ).toLocaleString()}`
+    );
+    console.log(
+        `   bounds ${bounds.ymin.toFixed( 6 )},${bounds.xmin.toFixed( 6 )} -> ${bounds.ymax.toFixed( 6 )},${bounds.xmax.toFixed( 6 )}`
+    );
+    console.log( `   Mapbox detail "${detail}" using vector tiles z${$.config.mapbox.vectorTileZoom}` );
 }
 
 export async function selectPrintArea() {

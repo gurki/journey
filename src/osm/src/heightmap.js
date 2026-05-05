@@ -1,6 +1,7 @@
 import tilebelt from "@mapbox/tilebelt";
 import { parse } from '@loaders.gl/core';
 import { ImageLoader } from '@loaders.gl/images';
+import { updateLoading } from "./loading.js";
 
 
 const URL_TEMPLATE = "https://api.mapbox.com/v4/mapbox.mapbox-terrain-dem-v1/{z}/{x}/{y}.pngraw";
@@ -74,6 +75,7 @@ export async function fetchTilesForBounds( bbox, zoom, urlTemplate, accessToken 
 ////////////////////////////////////////////////////////////////////////////////
 export async function rgbTileToHeightmap( tile ) {
 
+    console.time( `⏱ DEM decode ${JSON.stringify( Object.values( tile.index ) )}` );
     const image = await parse( tile.buffer, ImageLoader, { image: { type: "data" } } )
     const count = image.width * image.height;
     const index = tile.index;
@@ -94,6 +96,7 @@ export async function rgbTileToHeightmap( tile ) {
     }
 
     heightmap.data = heights;
+    console.timeEnd( `⏱ DEM decode ${JSON.stringify( Object.values( tile.index ) )}` );
     return heightmap;
 
 }
@@ -103,6 +106,10 @@ export async function rgbTileToHeightmap( tile ) {
 //  [1] https://docs.mapbox.com/data/tilesets/reference/mapbox-terrain-dem-v1
 export async function fetchHeightmapsForBounds( bbox, zoom, token ) {
     const tiles = await fetchTilesForBounds( bbox, zoom, URL_TEMPLATE, token );
+    console.log( `🧬 decoding ${tiles.length} DEM image tiles into heightmaps ...` );
+    updateLoading( "Building terrain", `Decoding ${tiles.length} elevation image tiles...`, 20 );
+    console.time( "⏱ DEM tiles -> heightmaps" );
     const heightmaps = await Promise.all( tiles.map( ( tile ) => rgbTileToHeightmap( tile ) ));
+    console.timeEnd( "⏱ DEM tiles -> heightmaps" );
     return heightmaps;
 }

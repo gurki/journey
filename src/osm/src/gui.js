@@ -17,6 +17,16 @@ export function initTweakpane() {
         max: 120
     });
         
+    const pipelineFolder = $.pane.addFolder({ title: "Pipeline", expanded: true });
+    const pipelineState = { pipeline: $.config.pipeline };
+    pipelineFolder.addBinding( pipelineState, "pipeline", {
+        options: { legacy: "legacy", partition: "partition" }
+    }).on( "change", ev => {
+        const params = new URLSearchParams( window.location.search );
+        params.set( "pipeline", ev.value );
+        window.location.search = params.toString();
+    });
+
     $.pane.addButton({ title: 'Export STL' }).on( 'click', exportSTL );
     $.pane.addButton({ title: 'Export GLTF' }).on( 'click', exportGLTF );
 

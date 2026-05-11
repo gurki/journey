@@ -1,13 +1,23 @@
 import { STATE as $ } from "./src/state.js";
 import { selectPrintArea } from "./src/selection.js";
 import { build } from "./src/build.js";
+import { buildPartition } from "./src/partition/build.js";
 import { initialize } from "./src/initialize.js";
 import { buildTerrain, drapeCityOnTerrain } from "./src/terrain.js";
 import { hideLoading, showLoading, tickLoading } from "./src/loading.js";
 
 
+function resolvePipeline() {
+    const params = new URLSearchParams( window.location.search );
+    const fromUrl = params.get( "pipeline" );
+    if ( fromUrl === "partition" || fromUrl === "legacy" ) return fromUrl;
+    return $.config.pipeline;
+}
+
+
 async function main() {
-    console.log( "🚀 Journey city print build starting" );
+    $.config.pipeline = resolvePipeline();
+    console.log( `🚀 Journey city print build starting (pipeline: ${$.config.pipeline})` );
     console.time( "⏱ total pipeline" );
     await selectPrintArea();
     showLoading( "Preparing workspace", "Setting up renderer and print coordinates...", 5 );
@@ -16,7 +26,11 @@ async function main() {
     await tickLoading( "Building terrain", "Fetching and decoding elevation tiles...", 14 );
     await buildTerrain();
     await tickLoading( "Building city geometry", "Fetching Mapbox vector features...", 34 );
-    await build();
+    if ( $.config.pipeline === "partition" ) {
+        await buildPartition();
+    } else {
+        await build();
+    }
     await tickLoading( "Placing layers", "Projecting printable map layers onto terrain...", 82 );
     drapeCityOnTerrain();
 

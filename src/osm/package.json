@@ -22,6 +22,7 @@
     "@loaders.gl/kml": "^4.2.2",
     "@mapbox/tilebelt": "^1.0.2",
     "@tweakpane/plugin-essentials": "^0.2.1",
+    "polygon-clipping": "^0.15.7",
     "three": "^0.165.0",
     "tweakpane": "^4.0.3"
   }

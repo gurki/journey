@@ -20,6 +20,7 @@ export const STATE = {
     city: new THREE.Group(),
     
     config: {
+        pipeline: "legacy",   //  "legacy" | "partition"
         bounds:  { ymin: 47.47749, xmin: 19.0287947, ymax: 47.52146, xmax: 19.0854007 }, //  total
         // bounds: { xmin: 19.0722, ymin: 47.5089, xmax: 19.0867, ymax: 47.5190 }, //  hom
         // bounds: { xmin: 11.747047, ymin: 47.633330, xmax: 11.886271, ymax: 47.724868 }, //  alps
@@ -88,6 +89,27 @@ export const STATE = {
                 railway: "overlay",
                 path: "overlay",
             },
+        },
+        partition: {
+            //  bas-relief step heights above terrain, in printed millimeters.
+            //  each cap is a constant-thickness carpet draped on terrain: its
+            //  bottom flush with the terrain surface, top at +offset above.
+            //  kept low enough that even modest real-world buildings (≥10m)
+            //  poke above the tallest cap (streets) at city print scales.
+            //  ordered so caps never share top-Y → no z-fighting by construction.
+            //  practical floor: ≥0.2mm = 1 layer at 0.2mm layer height.
+            capOffsetsMm: {
+                water:    0.2,
+                green:    0.4,
+                streets:  0.6,
+            },
+            //  max edge length on subdivided rings (print mm).
+            //  smaller = better terrain following on long polygon edges, more tris.
+            maxEdgeMm: 1.5,
+            //  buildings sink this far below local terrain min to ensure clean union.
+            buildingFootSinkMm: 1.0,
+            //  trim caps to just inside the tile by this much to avoid bezel z-fight.
+            tileInsetMm: 0.0,
         },
         colors: {
             buildings: "#ccc",  //  houses and more

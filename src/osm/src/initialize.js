@@ -36,6 +36,13 @@ function computeDerived() {
         $.materials[ type ] = new THREE.MeshStandardMaterial( { color, opacity: 0.8, transparent: false } );
     }
 
+    //  journey path looks better with slight sheen so it pops against terrain.
+    $.materials.journey = new THREE.MeshStandardMaterial({
+        color: $.config.colors.journey ?? "#ff5a36",
+        roughness: 0.4,
+        metalness: 0.05,
+    });
+
     $.worldTileSize = {
         width: $.config.printScale * $.config.tileSize.width,
         height: $.config.printScale * $.config.tileSize.height

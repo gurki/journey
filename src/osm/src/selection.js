@@ -1,5 +1,6 @@
 import { STATE as $ } from "./state.js";
 import * as util from "../../arc/src/util.js";
+import { parseArcJourney, mergeJourneys } from "./journey/parse.js";
 
 const DEFAULT_PRINT = {
     widthMm: Math.round( $.config.tileSize.width * 1000 ),
@@ -73,6 +74,13 @@ function createSelectionShell() {
                         ${detailOptions}
                     </select>
                 </div>
+            </label>
+            <label class="field">
+                <span>Journey (Arc .json — select one or many)</span>
+                <div class="field__control field__control--file">
+                    <input id="journey-file" type="file" accept=".json,application/json" multiple>
+                </div>
+                <small id="journey-status" class="field__status">No journey loaded — pick a region manually, or load one or more recordings to auto-fit.</small>
             </label>
             <div class="readout" aria-live="polite">
                 <div>
@@ -214,6 +222,8 @@ export async function selectPrintArea() {
     const zoom = screen.querySelector( "#selection-zoom" );
     const boundsText = screen.querySelector( "#selection-bounds" );
     const buildButton = screen.querySelector( "#build-city" );
+    const journeyInput = screen.querySelector( "#journey-file" );
+    const journeyStatus = screen.querySelector( "#journey-status" );
 
     syncFrameAspect( frame, widthInput, heightInput );
 
@@ -249,6 +259,98 @@ export async function selectPrintArea() {
     map.on( "zoom", updateReadout );
     window.addEventListener( "resize", updateReadout );
     [ widthInput, heightInput, bezelInput, detailInput ].forEach( input => input.addEventListener( "input", updateReadout ) );
+
+    function paddingForFrame() {
+        const mapRect = mapEl.getBoundingClientRect();
+        const frameRect = frame.getBoundingClientRect();
+        return {
+            top:    Math.max( 0, frameRect.top - mapRect.top ),
+            left:   Math.max( 0, frameRect.left - mapRect.left ),
+            right:  Math.max( 0, mapRect.right - frameRect.right ),
+            bottom: Math.max( 0, mapRect.bottom - frameRect.bottom ),
+        };
+    }
+
+    //  split a possibly-nulled point list into contiguous coordinate arrays
+    //  so the preview shows one polyline per segment (no bridging across gaps)
+    function pointsToMultiLine( points ) {
+        const lines = [];
+        let cur = [];
+        for ( const p of points ) {
+            if ( p ) { cur.push( [ p.lon, p.lat ] ); }
+            else if ( cur.length >= 2 ) { lines.push( cur ); cur = []; }
+            else { cur = []; }
+        }
+        if ( cur.length >= 2 ) lines.push( cur );
+        return lines;
+    }
+
+    function showJourneyOnMap( points ) {
+        if ( ! map.getSource( "journey-path" ) ) {
+            map.addSource( "journey-path", {
+                type: "geojson",
+                data: { type: "Feature", geometry: { type: "MultiLineString", coordinates: [] } },
+            });
+            map.addLayer({
+                id: "journey-line-outline",
+                type: "line",
+                source: "journey-path",
+                layout: { "line-join": "round", "line-cap": "round" },
+                paint: { "line-color": "#0b0b0b", "line-width": 6, "line-opacity": 0.7 },
+            });
+            map.addLayer({
+                id: "journey-line",
+                type: "line",
+                source: "journey-path",
+                layout: { "line-join": "round", "line-cap": "round" },
+                paint: { "line-color": $.config.colors.journey, "line-width": 3 },
+            });
+        }
+        map.getSource( "journey-path" ).setData({
+            type: "Feature",
+            geometry: { type: "MultiLineString", coordinates: pointsToMultiLine( points ) },
+        });
+    }
+
+    journeyInput.addEventListener( "change", async ev => {
+        const files = Array.from( ev.target.files ?? [] );
+        if ( files.length === 0 ) return;
+        journeyStatus.textContent = `Reading ${files.length} file${files.length === 1 ? "" : "s"}…`;
+
+        try {
+            const parsed = [];
+            for ( const file of files ) {
+                const text = await file.text();
+                const raw = JSON.parse( text );
+                parsed.push( parseArcJourney( raw, $.config.journey ) );
+            }
+            const merged = mergeJourneys( parsed, $.config.journey );
+
+            if ( ! merged.bbox || merged.points.filter( Boolean ).length < 2 ) {
+                journeyStatus.textContent = `Couldn't extract a useable path from the selected file${files.length === 1 ? "" : "s"}.`;
+                return;
+            }
+            $.journey = merged;
+            showJourneyOnMap( merged.points );
+            map.fitBounds(
+                [
+                    [ merged.bbox.xmin, merged.bbox.ymin ],
+                    [ merged.bbox.xmax, merged.bbox.ymax ],
+                ],
+                { padding: paddingForFrame(), duration: 600 }
+            );
+            const span = measureBounds( merged.bbox );
+            const pointCount = merged.points.filter( Boolean ).length;
+            const segmentCount = merged.points.filter( p => p === null ).length + 1;
+            journeyStatus.textContent =
+                `Loaded ${files.length} file${files.length === 1 ? "" : "s"} → ${pointCount} pts ` +
+                `in ${segmentCount} segment${segmentCount === 1 ? "" : "s"} ` +
+                `(from ${merged.raw} raw) — span ${formatMeters( span.width )} × ${formatMeters( span.height )}.`;
+        } catch ( err ) {
+            console.error( err );
+            journeyStatus.textContent = `Failed to load: ${err.message}`;
+        }
+    });
 
     return new Promise( resolve => {
         buildButton.addEventListener( "click", () => {

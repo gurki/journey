@@ -90,6 +90,38 @@ export const STATE = {
                 path: "overlay",
             },
         },
+        journey: {
+            //  half-tube cross-section
+            widthMm:        1.6,    //  diameter at the base of the half-tube (radius = widthMm/2)
+            //  vertical offset of the tube base above the underlying surface.
+            //  0 → flush with the surface (printable, no floating).  small negative
+            //  (e.g. -0.1) buries the base slightly to guarantee a clean union with
+            //  the surface when slicing.
+            anchorOffsetMm: -0.1,
+            //  number of radial segments around the half-circle cross-section
+            //  (higher = smoother tube, more triangles)
+            radialSegments: 12,
+            //  sample spacing along the path in print mm — the smoothed Catmull-Rom
+            //  curve is resampled at this resolution, so smaller = smoother curve
+            sampleSpacingMm: 0.8,
+            //  per-sample filtering when parsing the source JSON
+            maxAccuracyMeters: 50,
+            minSpacingMeters:  3,
+            simplifyMeters:    4,
+            //  consecutive samples whose timestamps differ by more than this
+            //  break the ribbon (avoids bridging across day boundaries / gaps)
+            timeGapBreakSeconds: 600,
+            //  XZ neighborhood radius for road snapping when draping a path point.
+            //  if the streets cap is hit anywhere within this radius of a sample,
+            //  the sample uses the streets cap Y — keeps the ribbon at road level
+            //  even when GPS noise puts an individual sample on a sidewalk / park.
+            //  ~0.5mm at 1:15000 = ~7.5m world, covers typical GPS noise + sidewalk.
+            roadSnapRadiusMm: 0.5,
+            //  Gaussian smoothing on Y values along the path (in path-sample units).
+            //  larger sigma → smoother elevation profile, kills remaining cap-to-
+            //  terrain transitions.  0 disables.
+            ySmoothingSigma: 3,
+        },
         partition: {
             //  bas-relief step heights above terrain, in printed millimeters.
             //  each cap is a constant-thickness carpet draped on terrain: its
@@ -115,12 +147,13 @@ export const STATE = {
             buildings: "#ccc",  //  houses and more
             greenery: "#294",   //  trees, bushes, shrubbery
             ground: "#161616",  //  baseplate
+            journey: "#ff5a36", //  recorded GPS path accent
             parks: "#2c4",      //  parks, gardens
             path: "#aaa",       //  often has "width"
             pedestrian: "#555", //  highway, but polygon
             railway: "#666",    //  rails
             stone: "#cc7",      //  stones, rocks, boulders
-            street: "#777",     //  often has "lanes" 
+            street: "#777",     //  often has "lanes"
             unknown: "#f00",
             water: "#0ff",      //  lakes, rivers, oceans
         },
@@ -165,6 +198,8 @@ export const STATE = {
     
     materials: {},
     heights: {},
+
+    journey: null,    //  { points: [{lon, lat, alt, t, speed, moving}], bbox: {xmin,ymin,xmax,ymax} }
 
     center: null,
     innerBounds: null,

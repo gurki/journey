@@ -4,6 +4,7 @@ import { build } from "./src/build.js";
 import { buildPartition } from "./src/partition/build.js";
 import { initialize } from "./src/initialize.js";
 import { buildTerrain, drapeCityOnTerrain } from "./src/terrain.js";
+import { addJourneyOverlay } from "./src/journey/overlay.js";
 import { hideLoading, showLoading, tickLoading } from "./src/loading.js";
 
 
@@ -33,6 +34,11 @@ async function main() {
     }
     await tickLoading( "Placing layers", "Projecting printable map layers onto terrain...", 82 );
     drapeCityOnTerrain();
+
+    if ( $.journey ) {
+        await tickLoading( "Tracing journey", "Draping recorded GPS path on top of the build...", 92 );
+        addJourneyOverlay();
+    }
 
     const s = $.config.renderScale / $.config.printScale;
     $.scene.scale.set( s, s, s );
